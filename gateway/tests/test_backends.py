@@ -7,6 +7,7 @@ house, which is why the timeouts are not negotiable.
 
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pytest
@@ -107,14 +108,35 @@ def test_a_source_that_never_answered_is_absent_from_the_result():
     assert raw == {} and fresh == set()
 
 
-def test_a_last_known_value_survives_a_failed_round(monkeypatch):
-    """The rule the whole snapshot format exists for."""
+def test_a_last_known_value_survives_a_failed_round():
+    """The rule the whole snapshot format exists for.
+
+    Note the timestamp is relative to the clock, not a small constant: an
+    earlier version set _at to 1.0, which on a machine with a large
+    time.monotonic() means "long overdue" and on a freshly booted CI container
+    means "not due yet" — so the test passed locally and failed in CI while
+    the code was right both times.
+    """
     p = backends.Poller()
     p._last["wx"] = {"current": {"temp": 9.9}}
-    p._at["wx"] = 1.0
+    p._at["wx"] = time.monotonic() - (config.SLOW_TTL + 10)   # definitely due
     raw, fresh = p.collect()
     assert raw["wx"] == {"current": {"temp": 9.9}}     # still there...
     assert "wx" not in fresh                            # ...and honestly stale
+
+
+def test_a_source_that_was_not_due_still_counts_as_current():
+    """The other half: not polling something is not the same as failing to.
+
+    Weather refreshed 5 s ago on a 60 s clock is current, and marking it stale
+    would put a needless "old" label on the remote's screen.
+    """
+    p = backends.Poller()
+    p._last["wx"] = {"current": {"temp": 9.9}}
+    p._at["wx"] = time.monotonic()                      # just refreshed
+    raw, fresh = p.collect()
+    assert raw["wx"] == {"current": {"temp": 9.9}}
+    assert "wx" in fresh
 
 
 def test_age_is_none_for_a_source_never_seen():

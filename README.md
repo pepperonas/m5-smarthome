@@ -8,19 +8,19 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 191 passing](https://img.shields.io/badge/tests-191%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![tests: 192 passing](https://img.shields.io/badge/tests-192%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
 ![firmware tests: 69](https://img.shields.io/badge/firmware%20tests-69-brightgreen?style=flat-square)
-![gateway tests: 70](https://img.shields.io/badge/gateway%20tests-70-brightgreen?style=flat-square)
+![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
 ![tool tests: 52](https://img.shields.io/badge/tool%20tests-52-brightgreen?style=flat-square)
 ![mutation probes: 16 caught](https://img.shields.io/badge/mutation%20probes-16%20caught-8A2BE2?style=flat-square)
-![lines of code: 7 198](https://img.shields.io/badge/lines%20of%20code-7%20198-blue?style=flat-square)
+![lines of code: 7 220](https://img.shields.io/badge/lines%20of%20code-7%20220-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
 ![C++: 4 135 lines](https://img.shields.io/badge/C%2B%2B-4%20135%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 024 lines](https://img.shields.io/badge/Python-3%20024%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![Python: 3 046 lines](https://img.shields.io/badge/Python-3%20046%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![flash: 33% of app slot](https://img.shields.io/badge/flash-33%25%20of%20app%20slot-informational?style=flat-square)
 ![launcher slot: 70% used](https://img.shields.io/badge/launcher%20slot-70%25%20used-informational?style=flat-square)
