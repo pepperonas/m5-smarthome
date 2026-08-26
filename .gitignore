@@ -1,0 +1,38 @@
+# --- Secrets: never commit ---
+*.env
+.env
+!*.env.example
+secrets.h
+secrets.json
+*token*
+!*token*.example
+*.key
+*.pem
+id_ed25519*
+id_rsa*
+
+# --- PlatformIO / build ---
+.pio/
+.pioenvs/
+.piolibdeps/
+firmware/.pio/
+*.bin
+*.elf
+*.map
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/
+temp/
+
+# Internal briefing, not part of the published project
+PROMPT.md

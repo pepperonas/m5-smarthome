@@ -1,0 +1,27 @@
+[Unit]
+Description=M5 Smart-Home Gateway (aggregates house APIs for the Cardputer remote)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/apps/m5-gateway
+EnvironmentFile=/home/pi/apps/m5-gateway/.env
+ExecStart=/home/pi/apps/m5-gateway/venv/bin/python -m m5gw.app
+Restart=always
+RestartSec=3
+
+# The gateway only ever talks to loopback backends and its own LAN port.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/apps/m5-gateway
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

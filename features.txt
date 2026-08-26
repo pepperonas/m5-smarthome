@@ -1,0 +1,48 @@
+# One line per feature. House rule: a new feature gets its line in the same
+# commit that adds it.
+
+## Gateway (Raspberry Pi)
+Aggregates 11 house endpoints into one flat JSON snapshot at GET /api/dash
+Serves the full house state in 721 measured bytes (vs 9565 for Hue lights alone)
+Fetches all backends in parallel so one slow device cannot stall the snapshot
+Serves a cached snapshot within a 1 s TTL so repeated polls cost nothing
+Refreshes slow sources (weather, climate, Pi health) on their own 60 s clock
+Keeps the last known value when a backend fails and marks it "old"
+Lists backends that never answered under "err" so the remote can dim just those
+Parses Yamaha XML server-side; the receiver has no JSON status endpoint
+Named write actions only (POST /api/act) — no generic pass-through to backends
+Refuses to ignite the fog machine without an explicit confirm:true
+Never gates switching the fog machine off
+Resolves toggles from cached state and refuses rather than guessing when unknown
+Returns an optimistic hint per action so the remote knows what to roll back
+Multi-device macros (goodnight, alloff, wake) in one request
+Shared-secret auth via Bearer header, X-Token header or query parameter
+Fails closed: refuses to start, and refuses every request, without a token
+Ships as a systemd unit with a sandboxed non-root service
+
+## Firmware (M5Cardputer / ADV)
+Home screen with live tiles for lights, strip, receiver, amp, disco, fog, climate
+Digit keys 1-7 jump straight into an app, no menu walking
+Room list with per-room toggle and brightness on +/-
+Typed command line with fuzzy matching ("wohnzimmer aus", "flur 50", "nebel")
+Umlaut-folding so "küche", "kueche" and "kuche" all match
+Tab completion on room names and command aliases
+One-letter typos are acted on; two typos only produce a suggestion
+Optimistic rendering: the screen reacts on the press, the request follows
+Rolls the display back and says so when the gateway refuses an action
+Never renders a failed poll as "no data" — last value stays, marked stale
+Marks Teufel state as an estimate on every frame (the Pi only guesses it)
+Second control path over infrared for the Teufel, working without Wi-Fi
+Marks infrared-driven state unconfirmed until a network poll agrees
+On-screen confirmation before the fog machine or a goodnight macro
+Deep sleep with wake on keyboard interrupt (TCA8418 INT, GPIO 11)
+Fast reconnect from a remembered BSSID, channel and lease — no scan on wake
+Draws the last snapshot from RTC memory before the radio is even up
+Queues key presses during reconnect instead of swallowing them
+Backlight dims, then blanks, then the device sleeps
+Wi-Fi credentials and gateway token typed on the device into NVS, never compiled in
+Exponential reconnect backoff, capped, with the UI staying usable throughout
+
+## Tooling
+Generates the Teufel IR table from the canonical CSV instead of duplicating it
+Mutation harness that breaks each guarantee and requires the suite to notice
