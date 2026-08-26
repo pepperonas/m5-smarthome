@@ -1,0 +1,117 @@
+name: build
+
+# Binaries are published from CI, not from somebody's laptop: what a release
+# contains should be reproducible from the commit it names.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write        # needed to attach binaries to a release
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The ESP32 toolchain is a large download; without this every run
+      # spends minutes re-fetching an unchanged compiler.
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Install tooling
+        run: |
+          pip install --upgrade platformio
+          pip install flask pytest
+
+      - name: Gateway tests
+        working-directory: gateway
+        run: python -m pytest -q
+
+      - name: Firmware core tests (host)
+        working-directory: firmware
+        run: pio test -e native
+
+      # A test you have never seen fail is not an assurance, so CI breaks each
+      # load-bearing guarantee on purpose and requires the suite to notice.
+      - name: Mutation probes
+        run: |
+          python tools/mutate.py gateway
+          python tools/mutate.py firmware
+
+      # The IR table is generated from the canonical CSV. If a regenerated
+      # table differs from what is committed, the two have drifted — and a
+      # drifted IR table fails silently on the device.
+      - name: IR table is in sync with its source
+        run: |
+          python tools/gen_ir_table.py
+          git diff --exit-code firmware/lib/core/ir_teufel.h
+
+      - name: Build firmware
+        working-directory: firmware
+        run: pio run -e cardputer
+
+      - name: Build sleep probe
+        working-directory: tools/sleep-probe
+        run: pio run -e probe
+
+      - name: Collect binaries
+        run: |
+          mkdir -p dist
+          cp firmware/.pio/build/cardputer/m5-smarthome-full.bin dist/
+          cp firmware/.pio/build/cardputer/m5-smarthome-full.bin.sha256 dist/
+          cp firmware/.pio/build/cardputer/firmware.bin dist/m5-smarthome-app.bin
+          cp firmware/.pio/build/cardputer/bootloader.bin dist/
+          cp firmware/.pio/build/cardputer/partitions.bin dist/
+          cp tools/sleep-probe/.pio/build/probe/firmware.bin dist/sleep-probe.bin
+          ( cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS )
+
+      # Every commit on main leaves a downloadable build, so there is always
+      # something current to flash even between releases.
+      - name: Upload build artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-smarthome-${{ github.sha }}
+          path: dist/
+          retention-days: 90
+
+      - name: Attach binaries to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## Flashing
+
+            `m5-smarthome-full.bin` is the whole image — bootloader, partition
+            table, OTA selector and application at their correct offsets:
+
+            ```bash
+            esptool.py --chip esp32s3 --port /dev/ttyUSB0 \
+              write_flash 0x0 m5-smarthome-full.bin
+            ```
+
+            It also works with M5Burner and web flashers that take a single
+            image at offset 0.
+
+            `sleep-probe.bin` is the measurement sketch. Flash it **first**: it
+            answers whether the keyboard controller really wakes the ESP32
+            from deep sleep, which is what the whole power design rests on.
+            See `docs/MEASURE.md`.
+
+            Verify a download against `SHA256SUMS`.

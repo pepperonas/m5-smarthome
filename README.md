@@ -97,11 +97,33 @@ in [`docs/GATEWAY.md`](docs/GATEWAY.md).
 
 ### 2. The firmware, on the Cardputer
 
+**Prebuilt binaries** are attached to every
+[release](https://github.com/pepperonas/m5-smarthome/releases), built by CI
+from the tagged commit. `m5-smarthome-full.bin` is the complete image —
+bootloader, partition table, OTA selector and application at their correct
+offsets:
+
+```bash
+esptool.py --chip esp32s3 --port /dev/cu.usbmodem* \
+  write_flash 0x0 m5-smarthome-full.bin
+```
+
+It also works with M5Burner and web flashers that take a single image at
+offset 0. Check a download against the release's `SHA256SUMS`. Between
+releases, every commit on `main` leaves a downloadable build under the
+[Actions](https://github.com/pepperonas/m5-smarthome/actions) tab.
+
+Or build it yourself:
+
 ```bash
 cd firmware
-pio run -e native -t test      # host tests, no hardware needed
-pio run -e cardputer -t upload # flash over USB-C
+pio test -e native             # host tests, no hardware needed
+pio run  -e cardputer -t upload # compile and flash over USB-C
 ```
+
+Every build also writes `m5-smarthome-full.bin` (and its `.sha256`) next to
+`firmware.bin` in `.pio/build/cardputer/`, so the merged image is never a
+separate step somebody forgets.
 
 ### 3. First run
 
@@ -249,7 +271,8 @@ tests. **On-device measurements — quiescent current, wake-to-usable time,
 frame rate, infrared range — were not taken: no Cardputer was attached while
 this was built.** [`docs/MEASURE.md`](docs/MEASURE.md) is the procedure for
 filling those in, and `tools/sleep-probe/` is a ready-to-flash sketch that
-answers the sleep question first.
+answers the sleep question first — `sleep-probe.bin` is attached to releases
+too, so it needs no toolchain.
 
 ## License
 
