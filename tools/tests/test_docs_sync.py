@@ -271,6 +271,24 @@ def test_every_doc_is_linked_from_the_readme():
         assert f"docs/{doc.name}" in readme, f"{doc.name} is never linked"
 
 
+def test_code_fences_are_balanced():
+    """An unclosed fence swallows the rest of the page when rendered."""
+    for doc in sorted(ROOT.glob("*.md")) + sorted((ROOT / "docs").glob("*.md")):
+        fences = doc.read_text().count("```")
+        assert fences % 2 == 0, f"{doc.name} has an unclosed code fence"
+
+
+def test_mermaid_diagrams_declare_a_type():
+    """A mermaid block without a diagram type renders as an error box."""
+    known = ("sequenceDiagram", "stateDiagram", "flowchart", "graph",
+             "classDiagram", "erDiagram", "gantt", "pie", "journey")
+    for doc in sorted((ROOT / "docs").glob("*.md")) + [README]:
+        for block in re.findall(r"```mermaid\n(.*?)```", doc.read_text(), re.S):
+            first = next(l.strip() for l in block.splitlines() if l.strip())
+            assert first.startswith(known), (
+                f"{doc.name}: mermaid block starts with {first!r}")
+
+
 def test_documented_files_exist():
     """Every relative link in the README points at something real."""
     text = README.read_text()

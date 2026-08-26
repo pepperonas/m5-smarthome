@@ -113,6 +113,46 @@ killing a backend under a running gateway — the value stayed, `old` appeared.
 
 ## Firmware internals
 
+### Screens
+
+```mermaid
+stateDiagram-v2
+    [*] --> Home
+    Home --> Rooms: 1 / Enter
+    Home --> Lichtwerk: 2 / Enter
+    Home --> Yamaha: 3 / Enter
+    Home --> Teufel: 4 / Enter
+    Home --> Disco: 5 / Enter
+    Home --> Fog: 6 / Enter
+    Home --> Climate: 7 / Enter
+    Home --> Console: / or Tab
+    Home --> Diagnostics: d
+    Home --> Confirm: g (goodnight)
+
+    Rooms --> Home: Esc
+    Lichtwerk --> Home: Esc
+    Yamaha --> Home: Esc
+    Teufel --> Home: Esc
+    Disco --> Home: Esc
+    Climate --> Home: Esc
+    Console --> Home: Esc / Enter
+    Diagnostics --> Home: Esc
+
+    Fog --> Confirm: Enter (ignite)
+    Fog --> Home: Esc
+    Confirm --> Home: Enter/j = yes
+    Confirm --> Home: anything else = cancel
+
+    note right of Confirm
+        While confirming, no other
+        key does anything at all.
+    end note
+```
+
+Arrows and Enter reach every screen; the digits are a shortcut, not a
+requirement. That distinction was learned the hard way — see
+[PITFALLS.md](PITFALLS.md).
+
 ### The core / shell split
 
 Everything deterministic is in `firmware/lib/core`, compiles for the host, and
@@ -158,9 +198,37 @@ connecting".
 
 ### Optimistic rendering
 
-A press changes the screen now; the request follows behind it. Each press
-records a short-lived **claim** about one field that overrides the snapshot
-until either
+A press changes the screen now; the request follows behind it.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant K as Keyboard
+    participant U as UI task (core 1)
+    participant N as Net task (core 0)
+    participant G as Gateway (Pi)
+
+    K->>U: ';' or Enter
+    U->>U: claim: room 81 -> on
+    U-->>K: screen updates immediately
+    U->>N: queue action (non-blocking)
+    N->>G: POST /api/act
+    G-->>N: 200 {applied:{hue:{group:81,on:true}}}
+    N-->>U: result
+    Note over U: next snapshot agrees →<br/>claim retires, nothing flickers
+
+    K->>U: ';' again
+    U->>U: claim: room 81 -> off
+    U-->>K: screen updates immediately
+    U->>N: queue action
+    N->>G: POST /api/act
+    G-->>N: 502 (backend did not answer)
+    N-->>U: result: failed
+    U-->>K: roll back + "fehlgeschlagen"
+```
+
+Each press records a short-lived **claim** about one field that overrides the
+snapshot until either
 
 - a fresher snapshot agrees (the claim retires silently, nothing flickers), or
 - the gateway refuses (the claim is dropped and the screen rolls back with a
