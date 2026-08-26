@@ -131,18 +131,15 @@ def count_mutations():
     return len(re.findall(r'^\s{8}\("', src, re.M))
 
 
-def read_build_sizes():
-    """Flash and RAM from the last cardputer build, if one exists."""
-    build = ROOT / "firmware" / ".pio" / "build" / "cardputer"
-    app = build / "firmware.bin"
-    if not app.exists():
-        return None
-    size = app.stat().st_size
-    # Partition capacities from the layout this project builds against.
-    flash_pct = round(100 * size / 0x330000)
-    launcher_pct = 100 * size // (1536 * 1024)
-    return {"app_bytes": size, "flash_pct": flash_pct,
-            "launcher_pct": launcher_pct}
+# Deliberately no build-size badge.
+#
+# Flash and slot usage can only be read out of .pio, which is not in the
+# repository — so the block rendered differently on a machine that had built
+# and on a CI runner that had not yet, and the drift check failed for a
+# difference that meant nothing. Every badge here is computed from tracked
+# files alone, so the same commit always yields the same block. The measured
+# sizes live in README's Status section and the changelog, where a human
+# updates them alongside the measurement.
 
 
 def snapshot_bytes():
@@ -209,11 +206,6 @@ def build_block(facts):
                    "3776AB", "python", "white"))
     b.append("")
 
-    if facts["build"]:
-        b.append(badge("flash", f"{facts['build']['flash_pct']}% of app slot",
-                       "informational"))
-        b.append(badge("launcher slot",
-                       f"{facts['build']['launcher_pct']}% used", "informational"))
     b.append(badge("snapshot", f"< {facts['snapshot']} B", "success"))
     b.append(badge("PSRAM required", "none", "success"))
     b.append(badge("secrets in repo", "zero", "success"))
@@ -236,7 +228,6 @@ def facts():
         "tests_tools": tools,
         "tests_total": fw + gw + tools,
         "mutations": count_mutations(),
-        "build": read_build_sizes(),
         "snapshot": snapshot_bytes(),
     }
 

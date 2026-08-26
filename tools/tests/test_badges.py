@@ -129,6 +129,30 @@ def test_every_badge_line_is_a_markdown_image():
         assert line.startswith("![") or line.startswith("[!["), line
 
 
+def test_the_block_does_not_depend_on_build_output():
+    """The same commit must render the same badges everywhere.
+
+    An earlier version read flash usage out of .pio, which exists on a machine
+    that has built and not on a CI runner that has not — so the drift check
+    failed over a difference that meant nothing, twice.
+    """
+    # Assert on the mechanism, not on words: an earlier version of this test
+    # searched for "RAM" and matched the "PSRAM required" badge.
+    assert "build" not in badges.facts(), "a build-derived value is back"
+
+    stash = ROOT / "firmware" / ".pio"
+    moved = stash.with_name(".pio-hidden-for-test")
+    if not stash.exists():
+        pytest.skip("no build output to hide")
+    with_build = badges.build_block(badges.facts())
+    stash.rename(moved)
+    try:
+        without_build = badges.build_block(badges.facts())
+    finally:
+        moved.rename(stash)
+    assert with_build == without_build
+
+
 def test_readme_carries_the_markers():
     text = badges.README.read_text()
     assert badges.START in text and badges.END in text
