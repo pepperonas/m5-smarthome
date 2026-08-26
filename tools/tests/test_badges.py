@@ -81,6 +81,23 @@ def test_line_counting_excludes_build_output():
     assert code < 20000, "build or dependency output is being counted"
 
 
+def test_only_tracked_files_are_counted():
+    """The count must not depend on what is lying around locally.
+
+    A gitignored secrets_local.h added 8 lines on the author's machine and
+    none on a CI runner, so the badge disagreed with itself and the drift
+    check failed for anyone with a personal build.
+    """
+    probe = ROOT / "firmware" / "untracked_line_probe.h"
+    before, _ = badges.count_lines()
+    probe.write_text("\n" * 50)
+    try:
+        after, _ = badges.count_lines()
+    finally:
+        probe.unlink()
+    assert after == before, "an untracked file changed the line count"
+
+
 def test_documentation_is_not_counted_as_code():
     code, per_lang = badges.count_lines()
     assert per_lang.get("Docs", 0) > 0

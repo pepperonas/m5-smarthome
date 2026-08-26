@@ -44,9 +44,24 @@ CODE_LANGS = {"C++", "C", "Python", "Shell"}
 
 
 def iter_files():
-    for path in ROOT.rglob("*"):
-        if not path.is_file():
+    """Exactly the files git tracks.
+
+    Walking the tree instead counted whatever happened to be lying around —
+    a local, gitignored secrets_local.h added 8 lines here and none on a CI
+    runner, so the badge disagreed with itself depending on the machine and
+    the drift check failed for anyone with a personal build. "Lines of code"
+    means what is in the repository.
+    """
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT,
+                         capture_output=True, text=True)
+    if out.returncode != 0:
+        raise SystemExit("not a git checkout; cannot count tracked files")
+    for name in out.stdout.split("\0"):
+        if not name:
             continue
+        path = ROOT / name
+        if not path.is_file():
+            continue                      # deleted but still in the index
         if any(part in SKIP_DIRS for part in path.parts):
             continue
         yield path
