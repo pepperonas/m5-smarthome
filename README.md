@@ -8,19 +8,19 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 194 passing](https://img.shields.io/badge/tests-194%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
-![firmware tests: 69](https://img.shields.io/badge/firmware%20tests-69-brightgreen?style=flat-square)
+![tests: 198 passing](https://img.shields.io/badge/tests-198%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 73](https://img.shields.io/badge/firmware%20tests-73-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
 ![tool tests: 54](https://img.shields.io/badge/tool%20tests-54-brightgreen?style=flat-square)
-![mutation probes: 16 caught](https://img.shields.io/badge/mutation%20probes-16%20caught-8A2BE2?style=flat-square)
-![lines of code: 7 314](https://img.shields.io/badge/lines%20of%20code-7%20314-blue?style=flat-square)
+![mutation probes: 18 caught](https://img.shields.io/badge/mutation%20probes-18%20caught-8A2BE2?style=flat-square)
+![lines of code: 7 433](https://img.shields.io/badge/lines%20of%20code-7%20433-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 4 135 lines](https://img.shields.io/badge/C%2B%2B-4%20135%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 099 lines](https://img.shields.io/badge/Python-3%20099%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![C++: 4 246 lines](https://img.shields.io/badge/C%2B%2B-4%20246%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 3 107 lines](https://img.shields.io/badge/Python-3%20107%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)
@@ -224,11 +224,11 @@ configuration.
 
 | Key | Home | Inside an app |
 |---|---|---|
-| `1`…`7` | jump to Rooms, Strip, Yamaha, Teufel, Disco, Fog, Climate | — |
-| `;` `.` | — | move up / down |
+| `;` `.` | move the cursor up / down | move up / down |
+| `Enter` | open the selected app | toggle the selected thing |
+| `1`…`7` | jump straight to Rooms, Strip, Yamaha, Teufel, Disco, Fog, Climate | — |
 | `,` `/` | `/` opens the command line | left / right (brightness, volume) |
 | `+` `-` | — | brightness, volume |
-| `Enter` | — | toggle the selected thing |
 | `Tab` | open the command line | complete a name (in the console) |
 | `` ` `` / `Esc` | — | back to Home |
 | `g` | Gute Nacht (asks first) | — |
@@ -241,8 +241,12 @@ configuration.
 | `o` | — | Disco: step through the 6 modes |
 
 The arrows are the ones printed on `;` `.` `,` `/` — the Cardputer has no
-dedicated arrow keys. On the home screen there is nothing to move left or
-right through, so `/` is free for the command line there.
+dedicated arrow keys, and they need no Fn: the library reports those keys as
+those characters. On the home screen there is nothing to move left or right
+through, so `/` is free for the command line there.
+
+Arrows and Enter alone will get you everywhere. The digits are a shortcut for
+when you know where you are going, not a requirement.
 
 ### Updating without a cable
 
@@ -346,6 +350,7 @@ docs/                architecture, API contract, gateway operations, measuring
 | `abgelehnt` after pressing Enter on fog | The gateway's interlock. Confirm on the device first. |
 | Mute does nothing on the Teufel | Known and unexplained: byte `0x28` reaches the box and has no effect, while power and volume work. Not a firmware fault. |
 | Everything stale, gateway healthy | Check the token: a wrong one gives 401 and the device keeps the old snapshot rather than blanking. |
+| Keys do nothing at all, on any screen | If the splash said `Board nicht erkannt`, the library installed a do-nothing keyboard reader — the firmware is running on hardware it does not recognise. |
 | Launcher shows `Use … partition` / `Remove …` / `Cancel` | Not an error — that is the target picker. Choose a slot; the file already passed its size and validity checks or the dialog would not have appeared. |
 | Launcher installs it, device shows nothing / boot-loops | The full image was given to the launcher. Use `m5-smarthome.bin`, then reflash via USB once to recover. |
 | Setup screen on every boot | NVS did not persist — check that the partition table matches the 8 MB flash. |

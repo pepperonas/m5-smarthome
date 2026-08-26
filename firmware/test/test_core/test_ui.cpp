@@ -24,6 +24,60 @@ static Key escKey() { Key k; k.esc = true; return k; }
 static Key downKey() { Key k; k.down = true; return k; }
 static Key upKey() { Key k; k.up = true; return k; }
 
+void test_enter_opens_the_selected_row_on_the_home_screen(void) {
+    // The defect this pins: arrows moved a cursor the home screen never drew,
+    // and Enter had no case at all, so the device looked frozen to anyone who
+    // reached for the keys people reach for first.
+    Dash d = makeDash();
+    UiState st;
+    handleKey(st, downKey(), d, 1000);          // row 1 = Strip
+    handleKey(st, enterKey(), d, 1000);
+    TEST_ASSERT_TRUE(st.screen == Screen::Lichtwerk);
+}
+
+void test_arrows_and_digits_agree_about_every_home_row(void) {
+    // Both read the same table, so they cannot drift apart.
+    Dash d = makeDash();
+    for (int row = 0; row < rowCount(UiState(), d); ++row) {
+        UiState viaArrows;
+        for (int i = 0; i < row; ++i) handleKey(viaArrows, downKey(), d, 1000);
+        handleKey(viaArrows, enterKey(), d, 1000);
+
+        UiState viaDigit;
+        handleKey(viaDigit, chr('1' + row), d, 1000);
+
+        TEST_ASSERT_TRUE(viaArrows.screen == viaDigit.screen);
+        TEST_ASSERT_TRUE(viaArrows.screen == homeScreenAt(row));
+        TEST_ASSERT_FALSE(viaArrows.screen == Screen::Home);
+    }
+}
+
+void test_every_screen_reachable_from_home_responds_to_enter(void) {
+    // A screen where Enter does nothing is a dead end on a device whose only
+    // input is a keyboard.
+    Dash d = makeDash();
+    d.fog.on = true;                 // so fog answers without the confirm gate
+    for (int row = 0; row < 7; ++row) {
+        UiState st;
+        st.screen = homeScreenAt(row);
+        KeyResult r = handleKey(st, enterKey(), d, 2000);
+        const bool acted = r.intent.valid || st.confirming ||
+                           st.screen != homeScreenAt(row);
+        // Climate is a read-only display; everything else must act.
+        if (st.screen == Screen::Climate) continue;
+        TEST_ASSERT_TRUE_MESSAGE(acted, "Enter does nothing on this screen");
+    }
+}
+
+void test_the_home_cursor_stays_in_range(void) {
+    Dash d = makeDash();
+    UiState st;
+    for (int i = 0; i < 30; ++i) handleKey(st, downKey(), d, 1000);
+    TEST_ASSERT_TRUE(st.cursor >= 0 && st.cursor < 7);
+    for (int i = 0; i < 30; ++i) handleKey(st, upKey(), d, 1000);
+    TEST_ASSERT_TRUE(st.cursor >= 0 && st.cursor < 7);
+}
+
 void test_digits_jump_straight_into_an_app(void) {
     // The reason this device has a keyboard: no menu walking.
     Dash d = makeDash();

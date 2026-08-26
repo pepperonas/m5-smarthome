@@ -92,27 +92,32 @@ void row(int index, const char* left, const char* right, bool selected,
     const int y = kContentY + index * kRowH;
     if (selected) {
         g_canvas->fillRect(0, y - 1, board::kScreenW, kRowH, 0x2124);
-        g_canvas->drawFastVLine(0, y - 1, kRowH, kAccent);
+        // A 2 px bar plus a caret: on a 240x135 panel a tint alone is easy to
+        // miss, and a cursor you cannot find reads as a frozen device.
+        g_canvas->fillRect(0, y - 1, 2, kRowH, kAccent);
+        g_canvas->setTextColor(kAccent, 0x2124);
+        g_canvas->drawString(">", 4, y);
     }
     const uint16_t col = stale ? kDim : (lit ? kOn : kFg);
     g_canvas->setTextColor(col, selected ? 0x2124 : kBg);
-    g_canvas->drawString(left, 6, y);
+    g_canvas->drawString(left, selected ? 12 : 6, y);
     if (right) {
         g_canvas->setTextColor(stale ? kDim : kFg, selected ? 0x2124 : kBg);
         g_canvas->drawRightString(right, board::kScreenW - 5, y);
     }
 }
 
-void drawHome(const core::Dash& d, uint32_t nowMs) {
+void drawHome(const core::UiState& st, const core::Dash& d,
+              uint32_t nowMs) {
     char buf[32];
     const bool anyData = d.valid;
 
     snprintf(buf, sizeof(buf), "%d an", d.hue.litCount);
-    row(0, "1 Raeume", anyData ? buf : "-", false, d.hue.litCount > 0,
+    row(0, "1 Raeume", anyData ? buf : "-", st.cursor == 0, d.hue.litCount > 0,
         !d.sourceOk(core::SRC_HUE) || d.sourceStale(core::SRC_HUE));
 
     row(1, "2 Strip", d.lw.warnOwned ? "Warn-Modus" : (d.lw.on ? "an" : "aus"),
-        false, d.lw.on, d.sourceStale(core::SRC_LW));
+        st.cursor == 1, d.lw.on, d.sourceStale(core::SRC_LW));
 
     if (d.sourceOk(core::SRC_YAM)) {
         snprintf(buf, sizeof(buf), "%.1f %s", (double)d.yam.db,
@@ -120,13 +125,14 @@ void drawHome(const core::Dash& d, uint32_t nowMs) {
     } else {
         snprintf(buf, sizeof(buf), "?");
     }
-    row(2, "3 Yamaha", buf, false, d.yam.on, d.sourceStale(core::SRC_YAM));
+    row(2, "3 Yamaha", buf, st.cursor == 2, d.yam.on,
+        d.sourceStale(core::SRC_YAM));
 
     // The Teufel is always an estimate — the Pi flips a flag after firing IR
     // and nothing ever confirms it. The tilde says so on every frame.
     snprintf(buf, sizeof(buf), "%d %s ~", d.tf.volume, d.tf.input);
-    row(3, "4 Teufel", d.sourceOk(core::SRC_TF) ? buf : "?", false, d.tf.on,
-        d.sourceStale(core::SRC_TF));
+    row(3, "4 Teufel", d.sourceOk(core::SRC_TF) ? buf : "?", st.cursor == 3,
+        d.tf.on, d.sourceStale(core::SRC_TF));
 
     if (d.disco.on) {
         snprintf(buf, sizeof(buf), "%d bpm  %.0f dB", d.disco.bpm,
@@ -134,7 +140,8 @@ void drawHome(const core::Dash& d, uint32_t nowMs) {
     } else {
         snprintf(buf, sizeof(buf), "aus  %.0f dB", (double)d.disco.spl);
     }
-    row(4, "5 Disco", buf, false, d.disco.on, d.sourceStale(core::SRC_DISCO));
+    row(4, "5 Disco", buf, st.cursor == 4, d.disco.on,
+        d.sourceStale(core::SRC_DISCO));
 
     if (d.fog.tankPct >= 0) {
         snprintf(buf, sizeof(buf), "%s  Tank %d%%", d.fog.on ? "AN" : "aus",
@@ -142,7 +149,8 @@ void drawHome(const core::Dash& d, uint32_t nowMs) {
     } else {
         snprintf(buf, sizeof(buf), "%s", d.fog.on ? "AN" : "aus");
     }
-    row(5, "6 Nebel", buf, false, d.fog.on, d.sourceStale(core::SRC_FOG));
+    row(5, "6 Nebel", buf, st.cursor == 5, d.fog.on,
+        d.sourceStale(core::SRC_FOG));
 
     if (d.indoor.valid && d.outdoor.valid) {
         snprintf(buf, sizeof(buf), "%.1f / %.1f C", (double)d.indoor.temp,
@@ -152,7 +160,7 @@ void drawHome(const core::Dash& d, uint32_t nowMs) {
     } else {
         snprintf(buf, sizeof(buf), "?");
     }
-    row(6, "7 Klima", buf, false, false,
+    row(6, "7 Klima", buf, st.cursor == 6, false,
         d.sourceStale(core::SRC_CLIMA) || d.indoor.ageSeconds > 0);
 }
 
@@ -329,9 +337,9 @@ void draw(const core::UiState& st, const core::Dash& d, uint32_t nowMs,
 
     drawHeader(d, nowMs, link, batteryPct, unconfirmed);
 
-    const char* hint = "1-7 Apps  /  Befehl  g Nacht";
+    const char* hint = ";. waehlen  Enter oeffnen  / Befehl";
     switch (st.screen) {
-        case core::Screen::Home:    drawHome(d, nowMs); break;
+        case core::Screen::Home:    drawHome(st, d, nowMs); break;
         case core::Screen::Rooms:
             drawRooms(st, d);
             hint = "Enter schaltet  +/- Helligkeit";

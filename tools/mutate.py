@@ -47,6 +47,14 @@ MUTATIONS = {
          "                       kYamahaInputs[st.yamInput]);", "                (void)0;"),
         ("the remote paints over strip-warn", "lib/core/ui_state.cpp",
          "                if (d.lw.warnOwned) {", "                if (false) {"),
+        ("Enter does nothing on the home screen", "lib/core/ui_state.cpp",
+         "            if (k.enter || k.right) {\n"
+         "                st.screen = homeScreenAt(st.cursor);",
+         "            if (false) {\n"
+         "                st.screen = homeScreenAt(st.cursor);"),
+        ("the home cursor and the digit keys disagree", "lib/core/ui_state.cpp",
+         "    return (idx >= 0 && idx < kHomeRowCount) ? kHomeRows[idx] : Screen::Home;",
+         "    return (idx >= 0 && idx < kHomeRowCount) ? kHomeRows[(idx + 1) % kHomeRowCount] : Screen::Home;"),
     ],
     "gateway": [
         ("the fog interlock is removed", "m5gw/actions.py",

@@ -128,6 +128,18 @@ credentials in from the gitignored `secrets_local.h`; `cardputer` cannot see
 that file at all, which is what keeps published binaries clean. Verified both
 ways after every build, and CI scans the artefacts it is about to attach.
 
+**Every screen with a cursor must draw it, and Enter must do something.** The
+home screen shipped with neither: arrows moved an invisible cursor and
+`handleKey` had no `case Screen::Home` at all, so the device looked frozen to
+anyone who reached for arrows and Enter rather than the digit shortcuts. The
+digits worked the whole time, which is why it survived review. Pinned by tests
+that walk every home row both ways and require Enter to act on every screen.
+
+**Dead keys can also mean an unrecognised board.** `Keyboard_Class::begin()`
+picks the TCA8418 reader for the ADV and the GPIO matrix for the original; for
+anything else it installs a do-nothing reader and prints to serial only. The
+firmware now says so on screen.
+
 ## House rules this code enforces
 
 These come from bugs the house has already paid for. Do not relax them.

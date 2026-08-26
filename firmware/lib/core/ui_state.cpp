@@ -54,19 +54,20 @@ Intent make(const char* target, const char* action, int arg = 0,
     return i;
 }
 
-// Digit shortcuts on the home screen. One key press, one destination — the
-// point of having 56 keys is not having to walk a tree.
+// The home screen in order. The digit shortcuts and the cursor both read
+// from this, so they can never disagree about what row 3 is.
+const Screen kHomeRows[] = {
+    Screen::Rooms, Screen::Lichtwerk, Screen::Yamaha, Screen::Teufel,
+    Screen::Disco, Screen::Fog, Screen::Climate,
+};
+constexpr int kHomeRowCount = 7;
+
+// One key press, one destination — the point of having 56 keys is not having
+// to walk a tree. Arrows plus Enter do the same thing for anyone who reaches
+// for those first, which most people do.
 Screen screenForDigit(char c) {
-    switch (c) {
-        case '1': return Screen::Rooms;
-        case '2': return Screen::Lichtwerk;
-        case '3': return Screen::Yamaha;
-        case '4': return Screen::Teufel;
-        case '5': return Screen::Disco;
-        case '6': return Screen::Fog;
-        case '7': return Screen::Climate;
-        default:  return Screen::Home;
-    }
+    const int idx = c - '1';
+    return (idx >= 0 && idx < kHomeRowCount) ? kHomeRows[idx] : Screen::Home;
 }
 
 }  // namespace
@@ -83,9 +84,14 @@ bool toastVisible(const UiState& st, uint32_t nowMs) {
 int rowCount(const UiState& st, const Dash& d) {
     switch (st.screen) {
         case Screen::Rooms: return d.hue.count;
-        case Screen::Home:  return 7;
+        case Screen::Home:  return kHomeRowCount;
         default:            return 0;
     }
+}
+
+Screen homeScreenAt(int row) {
+    if (row < 0 || row >= kHomeRowCount) return Screen::Home;
+    return kHomeRows[row];
 }
 
 KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
@@ -214,6 +220,18 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
     }
 
     switch (st.screen) {
+        case Screen::Home: {
+            // Without this, arrows moved an invisible cursor and Enter did
+            // nothing at all — the screen looked frozen to anyone who did not
+            // already know about the digit shortcuts.
+            if (k.enter || k.right) {
+                st.screen = homeScreenAt(st.cursor);
+                st.cursor = 0;
+                return out;
+            }
+            break;
+        }
+
         case Screen::Rooms: {
             if (st.cursor < 0 || st.cursor >= d.hue.count) return out;
             const Room& r = d.hue.rooms[st.cursor];

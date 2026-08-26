@@ -459,6 +459,11 @@ void test_iris_warn_is_not_in_the_effect_cycle(void);
 void test_the_effect_key_yields_while_strip_warn_owns_the_strip(void);
 void test_cycle_lists_match_the_gateway_whitelists(void);
 
+void test_enter_opens_the_selected_row_on_the_home_screen(void);
+void test_arrows_and_digits_agree_about_every_home_row(void);
+void test_every_screen_reachable_from_home_responds_to_enter(void);
+void test_the_home_cursor_stays_in_range(void);
+
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -511,6 +516,10 @@ int main(int, char**) {
     RUN_TEST(test_backoff_doubles_and_is_capped);
     RUN_TEST(test_a_stale_access_point_hint_is_not_used);
     RUN_TEST(test_an_empty_access_point_hint_is_rejected);
+    RUN_TEST(test_enter_opens_the_selected_row_on_the_home_screen);
+    RUN_TEST(test_arrows_and_digits_agree_about_every_home_row);
+    RUN_TEST(test_every_screen_reachable_from_home_responds_to_enter);
+    RUN_TEST(test_the_home_cursor_stays_in_range);
     RUN_TEST(test_digits_jump_straight_into_an_app);
     RUN_TEST(test_escape_always_goes_home);
     RUN_TEST(test_room_list_wraps_around);

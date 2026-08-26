@@ -312,6 +312,24 @@ void setup() {
     hwir::begin();
     store::bumpBootCount();
 
+    // If M5Unified does not recognise the board, Keyboard_Class::begin()
+    // installs a do-nothing reader and reports it only over serial — leaving
+    // a device whose keys are simply dead with no explanation on screen.
+    const auto boardType = M5.getBoard();
+    if (boardType != m5::board_t::board_M5Cardputer &&
+        boardType != m5::board_t::board_M5CardputerADV) {
+        M5Cardputer.Display.fillScreen(TFT_BLACK);
+        M5Cardputer.Display.setTextColor(TFT_RED, TFT_BLACK);
+        M5Cardputer.Display.drawString("Board nicht erkannt", 6, 20);
+        M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+        char b[40];
+        snprintf(b, sizeof(b), "M5.getBoard() = %d", (int)boardType);
+        M5Cardputer.Display.drawString(b, 6, 42);
+        M5Cardputer.Display.drawString("Tastatur bleibt tot.", 6, 64);
+        M5Cardputer.Display.drawString("Firmware fuer Cardputer?", 6, 86);
+        delay(6000);
+    }
+
     const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     const bool fromSleep = cause == ESP_SLEEP_WAKEUP_EXT0;
 

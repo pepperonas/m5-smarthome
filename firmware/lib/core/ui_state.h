@@ -76,6 +76,10 @@ bool toastVisible(const UiState& st, uint32_t nowMs);
 // Number of rows on the current screen (for cursor clamping and drawing).
 int rowCount(const UiState& st, const Dash& d);
 
+// Which screen the n-th home row opens. Shared by Enter and the digit keys so
+// the two can never drift apart.
+Screen homeScreenAt(int row);
+
 constexpr uint32_t kToastMs = 2500;
 
 // Cycle lists. Short on purpose: a remote offers the inputs you actually use,
