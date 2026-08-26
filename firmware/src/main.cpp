@@ -33,6 +33,13 @@
 #include "optimistic.h"
 #include "ui_state.h"
 
+// A personal build may carry credentials so the device joins the network on
+// first boot. The default environment never defines this, so the published
+// binaries always ask on the device and contain no secret.
+#if M5SH_LOCAL_SECRETS
+#include "../secrets_local.h"
+#endif
+
 namespace {
 
 core::Dash g_dash;
@@ -333,8 +340,26 @@ void setup() {
     }
 
     if (!store::load(g_cfg)) {
-        g_setupMode = true;
-        runSetup();
+#if M5SH_LOCAL_SECRETS
+        // Seed NVS once from the compiled-in values, then behave exactly like
+        // a device that was set up by hand — including the reset gesture,
+        // which still wipes it. Writing to NVS rather than reading the macros
+        // everywhere keeps one code path for both kinds of build.
+        store::Config baked;
+        strncpy(baked.ssid, M5SH_WIFI_SSID, sizeof(baked.ssid) - 1);
+        strncpy(baked.pass, M5SH_WIFI_PASS, sizeof(baked.pass) - 1);
+        strncpy(baked.token, M5SH_GW_TOKEN, sizeof(baked.token) - 1);
+        strncpy(baked.host, M5SH_GW_HOST, sizeof(baked.host) - 1);
+        baked.port = M5SH_GW_PORT;
+        if (baked.ssid[0] && baked.token[0]) {
+            store::save(baked);
+            store::load(g_cfg);
+        }
+#endif
+        if (!g_cfg.valid) {
+            g_setupMode = true;
+            runSetup();
+        }
     }
 
     // Draw *something* before the radio is even up. On a wake the last

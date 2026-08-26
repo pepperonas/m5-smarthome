@@ -58,6 +58,8 @@ Attaches binaries and SHA256SUMS to every tagged release, built by CI not a lapt
 Leaves a downloadable build on every commit to main, between releases
 CI runs all three suites, both mutation harnesses, and checks the IR table for drift
 Generates README badges from measured facts and fails CI when they go stale
+Scans tree and built binaries for secrets by reading bytes, never shelling to grep
+Optional personal build bakes in credentials; the published environment cannot
 
 ## Tooling
 Generates the Teufel IR table from the canonical CSV instead of duplicating it

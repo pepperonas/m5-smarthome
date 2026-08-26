@@ -3,6 +3,10 @@
 .env
 !*.env.example
 secrets.h
+secrets_local.h
+secrets*.h
+!secrets*.h.example
+*.local.h
 secrets.json
 *token*
 !*token*.example

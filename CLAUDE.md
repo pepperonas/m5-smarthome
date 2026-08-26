@@ -113,6 +113,21 @@ write into. A partition is only listed when the file fits — the loop in
 was accepted. Its actual rejections read `File is too big` / `file is not
 valid` and never reach the picker.
 
+**Never verify a secret's absence with `grep`.** `grep -qF "$SECRET" fw.bin`
+printed nothing here while the secret sat in the file, and a scan of a public
+artefact was called clean on that basis. The first diagnosis — "BSD grep exits
+1 on binaries" — was **wrong**: `/usr/bin/grep` gets it right. The `grep`
+being run was a shell function resolving to ugrep, which stays silent on a
+binary match. That is the real lesson: `grep` is a name, not a defined tool,
+and what answers depends on the shell, the PATH and the machine. Use
+`tools/scan_secrets.py` (reads bytes, no subprocess, no decoding) or compare
+in Python.
+
+**A personal build lives in its own environment.** `cardputer-local` compiles
+credentials in from the gitignored `secrets_local.h`; `cardputer` cannot see
+that file at all, which is what keeps published binaries clean. Verified both
+ways after every build, and CI scans the artefacts it is about to attach.
+
 ## House rules this code enforces
 
 These come from bugs the house has already paid for. Do not relax them.

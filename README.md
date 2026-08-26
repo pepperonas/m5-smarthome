@@ -8,19 +8,19 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 176 passing](https://img.shields.io/badge/tests-176%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![tests: 190 passing](https://img.shields.io/badge/tests-190%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
 ![firmware tests: 69](https://img.shields.io/badge/firmware%20tests-69-brightgreen?style=flat-square)
 ![gateway tests: 70](https://img.shields.io/badge/gateway%20tests-70-brightgreen?style=flat-square)
-![tool tests: 37](https://img.shields.io/badge/tool%20tests-37-brightgreen?style=flat-square)
+![tool tests: 51](https://img.shields.io/badge/tool%20tests-51-brightgreen?style=flat-square)
 ![mutation probes: 16 caught](https://img.shields.io/badge/mutation%20probes-16%20caught-8A2BE2?style=flat-square)
-![lines of code: 6 806](https://img.shields.io/badge/lines%20of%20code-6%20806-blue?style=flat-square)
+![lines of code: 7 174](https://img.shields.io/badge/lines%20of%20code-7%20174-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 4 110 lines](https://img.shields.io/badge/C%2B%2B-4%20110%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 2 657 lines](https://img.shields.io/badge/Python-2%20657%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![C++: 4 143 lines](https://img.shields.io/badge/C%2B%2B-4%20143%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 2 992 lines](https://img.shields.io/badge/Python-2%20992%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![flash: 33% of app slot](https://img.shields.io/badge/flash-33%25%20of%20app%20slot-informational?style=flat-square)
 ![launcher slot: 70% used](https://img.shields.io/badge/launcher%20slot-70%25%20used-informational?style=flat-square)
@@ -169,6 +169,27 @@ as asking.
 Check a download against the release's `SHA256SUMS`. Between releases, every
 commit on `main` leaves a downloadable build under the
 [Actions](https://github.com/pepperonas/m5-smarthome/actions) tab.
+
+**A personal build that joins your network on first boot:**
+
+```bash
+cd firmware
+cp secrets_local.h.example secrets_local.h    # gitignored
+$EDITOR secrets_local.h                       # SSID, password, gateway token
+pio run -e cardputer-local -t upload
+```
+
+The device then skips the setup screen entirely. The reset gesture still
+works, so it is not a one-way door.
+
+> ⚠️ **That binary contains your Wi-Fi password and gateway token in clear
+> text.** Anyone holding the device or the `.bin` can read them out. Never
+> publish one, never attach one to a release. The default `cardputer`
+> environment cannot pick up `secrets_local.h` at all, which is why the two
+> are separate environments rather than one flag.
+>
+> `python3 tools/scan_secrets.py --with-local` checks the tree and every built
+> binary for the actual values before you push.
 
 Or build it yourself:
 

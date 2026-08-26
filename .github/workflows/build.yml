@@ -69,6 +69,11 @@ jobs:
           python tools/gen_ir_table.py
           git diff --exit-code firmware/lib/core/ir_teufel.h
 
+      # Reads the bytes itself rather than shelling out to grep — see
+      # tools/scan_secrets.py for why that distinction is load-bearing.
+      - name: No secrets in the tree
+        run: python tools/scan_secrets.py --no-builds
+
       - name: Build firmware
         working-directory: firmware
         run: pio run -e cardputer
@@ -76,6 +81,9 @@ jobs:
       - name: Build sleep probe
         working-directory: tools/sleep-probe
         run: pio run -e probe
+
+      - name: No secrets in the built binaries
+        run: python tools/scan_secrets.py
 
       - name: Collect binaries
         run: |
