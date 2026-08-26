@@ -128,6 +128,21 @@ credentials in from the gitignored `secrets_local.h`; `cardputer` cannot see
 that file at all, which is what keeps published binaries clean. Verified both
 ways after every build, and CI scans the artefacts it is about to attach.
 
+**⚠️ `isChange()` is CONSUMING.** It compares the current key count against
+its own last-seen value and updates it, so a second call in the same pass
+returns false. The shell called it once to detect an event and again to read
+it — every press was detected and then read back as empty, and **no key did
+anything on any screen**. It survived because the shell was declared "a thin
+adapter, verified on the device" and the device was never attached. Read it
+once, hand the report to `core::mapKey`. Pinned in
+`tools/tests/test_firmware_shell.py`, which reads the source with comments
+stripped and mutation-probed both ways.
+
+**The "too thin to test" layer is where the worst bug lived.** Twice now: the
+consuming isChange(), and a home screen whose cursor was never drawn. If a
+layer cannot be unit-tested, at minimum pin its invariants against the source
+— and get it onto hardware before believing it works.
+
 **Every screen with a cursor must draw it, and Enter must do something.** The
 home screen shipped with neither: arrows moved an invisible cursor and
 `handleKey` had no `case Screen::Home` at all, so the device looked frozen to

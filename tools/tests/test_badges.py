@@ -33,11 +33,19 @@ def test_firmware_tests_are_counted_from_the_runner():
 
 
 def test_registered_tests_are_actually_defined():
-    """A typo in RUN_TEST would not compile, but a stale registration in the
-    UI file would still inflate the badge."""
-    runner = (ROOT / "firmware" / "test" / "test_core" / "test_main.cpp").read_text()
-    ui = (ROOT / "firmware" / "test" / "test_core" / "test_ui.cpp").read_text()
-    defined = set(re.findall(r"^void (test_\w+)\(void\)\s*\{", runner + ui, re.M))
+    """A typo in RUN_TEST would not compile, but a stale registration would
+    still inflate the badge.
+
+    Reads every test file in the directory rather than a hard-coded list: the
+    first version named two files and went red the moment a third was added,
+    which is a pin failing for its own bookkeeping instead of for a defect.
+    """
+    test_dir = ROOT / "firmware" / "test" / "test_core"
+    sources = sorted(test_dir.glob("*.cpp"))
+    assert len(sources) >= 2, "test sources not found"
+    combined = "".join(p.read_text() for p in sources)
+    defined = set(re.findall(r"^void (test_\w+)\(void\)\s*\{", combined, re.M))
+    runner = (test_dir / "test_main.cpp").read_text()
     for name in re.findall(r"RUN_TEST\((\w+)\)", runner):
         assert name in defined, f"{name} is registered but never defined"
 

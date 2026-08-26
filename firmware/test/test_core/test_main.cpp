@@ -464,6 +464,19 @@ void test_arrows_and_digits_agree_about_every_home_row(void);
 void test_every_screen_reachable_from_home_responds_to_enter(void);
 void test_the_home_cursor_stays_in_range(void);
 
+void test_no_event_when_nothing_changed(void);
+void test_no_event_when_no_key_is_down(void);
+void test_a_changed_press_is_an_event(void);
+void test_the_printed_arrows_map_to_directions(void);
+void test_slash_also_arrives_as_a_character(void);
+void test_backtick_is_escape(void);
+void test_enter_arrives_with_an_empty_word(void);
+void test_a_null_word_is_not_a_crash(void);
+void test_ordinary_characters_pass_through(void);
+void test_digits_are_not_swallowed_by_the_arrow_mapping(void);
+void test_only_the_first_character_is_used(void);
+void test_the_output_is_untouched_when_there_is_no_event(void);
+
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -546,5 +559,17 @@ int main(int, char**) {
     RUN_TEST(test_cycle_lists_match_the_gateway_whitelists);
     RUN_TEST(test_a_toast_expires);
     RUN_TEST(test_keys_that_mean_nothing_here_do_nothing);
+    RUN_TEST(test_no_event_when_nothing_changed);
+    RUN_TEST(test_no_event_when_no_key_is_down);
+    RUN_TEST(test_a_changed_press_is_an_event);
+    RUN_TEST(test_the_printed_arrows_map_to_directions);
+    RUN_TEST(test_slash_also_arrives_as_a_character);
+    RUN_TEST(test_backtick_is_escape);
+    RUN_TEST(test_enter_arrives_with_an_empty_word);
+    RUN_TEST(test_a_null_word_is_not_a_crash);
+    RUN_TEST(test_ordinary_characters_pass_through);
+    RUN_TEST(test_digits_are_not_swallowed_by_the_arrow_mapping);
+    RUN_TEST(test_only_the_first_character_is_used);
+    RUN_TEST(test_the_output_is_untouched_when_there_is_no_event);
     return UNITY_END();
 }

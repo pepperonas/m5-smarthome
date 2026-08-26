@@ -29,6 +29,7 @@
 #include "hw_store.h"
 #include "hw_ui.h"
 #include "ir_teufel.h"
+#include "keymap.h"
 #include "netplan.h"
 #include "optimistic.h"
 #include "ui_state.h"
@@ -56,33 +57,27 @@ bool g_setupMode = false;
 
 // --- keyboard -------------------------------------------------------------
 
-// The Cardputer has no dedicated arrows; they are printed on ; . , / and the
-// vendor library reports them as those characters.
-core::Key readKey() {
-    core::Key k;
-    if (!M5Cardputer.Keyboard.isChange() || !M5Cardputer.Keyboard.isPressed()) {
-        return k;
-    }
-    const auto st = M5Cardputer.Keyboard.keysState();
-    k.enter = st.enter;
-    k.del = st.del;
-    k.tab = st.tab;
-    for (auto c : st.word) {
-        switch (c) {
-            case ';': k.up = true; break;
-            case '.': k.down = true; break;
-            case ',': k.left = true; break;
-            case '/': k.right = true; k.ch = '/'; break;
-            case '`': k.esc = true; break;
-            default:  k.ch = c; break;
-        }
-        break;                       // one character per event is enough here
-    }
-    return k;
-}
+// ⚠️ isChange() is CONSUMING: it compares against its own last-seen key count
+// and updates it, so the second call in the same loop returns false. Calling
+// it once to detect an event and again to read it meant every press was seen
+// and then read back as empty — no key did anything at all.
+//
+// So it is called exactly once here, and the report is handed to the pure
+// mapper in lib/core/keymap.cpp where it can be tested on a host.
+bool readKey(core::Key& out) {
+    core::KeyReport r;
+    r.changed = M5Cardputer.Keyboard.isChange();
+    r.pressedCount = M5Cardputer.Keyboard.isPressed();
+    if (!core::hasKeyEvent(r)) return false;
 
-bool anyKeyEvent() {
-    return M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed();
+    const auto st = M5Cardputer.Keyboard.keysState();
+    r.enter = st.enter;
+    r.del = st.del;
+    r.tab = st.tab;
+    r.fn = st.fn;
+    r.word = st.word.empty() ? nullptr : st.word.data();
+    r.wordLen = st.word.size();
+    return core::mapKey(r, out);
 }
 
 // --- battery --------------------------------------------------------------
@@ -403,9 +398,9 @@ void loop() {
     M5Cardputer.update();
     const uint32_t now = millis();
 
-    if (anyKeyEvent()) {
+    core::Key k;
+    if (readKey(k)) {
         g_lastKeyMs = now;
-        const core::Key k = readKey();
 
         core::Dash view = g_dash;
         g_overlays.apply(view, now);

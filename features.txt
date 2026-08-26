@@ -24,6 +24,7 @@ Announces itself on the LAN as _m5gw._tcp so a fresh device needs no IP address
 ## Firmware (M5Cardputer / ADV)
 Home screen with live tiles for lights, strip, receiver, amp, disco, fog, climate
 Home screen fully navigable with arrows and Enter, cursor visibly highlighted
+Keyboard mapping lives in a host-tested module, not in the untestable shell
 Digit keys 1-7 jump straight into an app, no menu walking
 Says so on screen when the board is unrecognised instead of silently dead keys
 Room list with per-room toggle and brightness on +/-
