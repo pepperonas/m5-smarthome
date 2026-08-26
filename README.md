@@ -1,5 +1,37 @@
 # m5-smarthome
 
+<!-- badges:start -->
+
+[![CI](https://img.shields.io/github/actions/workflow/status/pepperonas/m5-smarthome/build.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI)](https://github.com/pepperonas/m5-smarthome/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/pepperonas/m5-smarthome?style=flat-square&logo=github&label=release)](https://github.com/pepperonas/m5-smarthome/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/pepperonas/m5-smarthome/total?style=flat-square&logo=github&label=downloads)](https://github.com/pepperonas/m5-smarthome/releases)
+[![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
+[![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
+
+![tests: 176 passing](https://img.shields.io/badge/tests-176%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 69](https://img.shields.io/badge/firmware%20tests-69-brightgreen?style=flat-square)
+![gateway tests: 70](https://img.shields.io/badge/gateway%20tests-70-brightgreen?style=flat-square)
+![tool tests: 37](https://img.shields.io/badge/tool%20tests-37-brightgreen?style=flat-square)
+![mutation probes: 16 caught](https://img.shields.io/badge/mutation%20probes-16%20caught-8A2BE2?style=flat-square)
+![lines of code: 6 806](https://img.shields.io/badge/lines%20of%20code-6%20806-blue?style=flat-square)
+
+![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
+![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
+![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
+![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
+![C++: 4 110 lines](https://img.shields.io/badge/C%2B%2B-4%20110%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 2 657 lines](https://img.shields.io/badge/Python-2%20657%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+
+![flash: 33% of app slot](https://img.shields.io/badge/flash-33%25%20of%20app%20slot-informational?style=flat-square)
+![launcher slot: 70% used](https://img.shields.io/badge/launcher%20slot-70%25%20used-informational?style=flat-square)
+![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
+![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)
+![secrets in repo: zero](https://img.shields.io/badge/secrets%20in%20repo-zero-success?style=flat-square)
+![gateway: Flask](https://img.shields.io/badge/gateway-Flask-000000?logo=flask&logoColor=white&style=flat-square)
+![docs: 5 documents](https://img.shields.io/badge/docs-5%20documents-informational?logo=markdown&logoColor=white&style=flat-square)
+
+<!-- badges:end -->
+
 Firmware for the **M5Stack Cardputer** that turns it into a physical remote
 control for a self-hosted smart home — Philips Hue, a WS2812 LED strip, a
 Yamaha AV receiver, a Teufel amplifier, a fog machine and a beat-reactive
@@ -119,9 +151,10 @@ esptool.py --chip esp32s3 --port /dev/cu.usbmodem* \
 partition table and OTA selector at their correct offsets, so it also works
 with M5Burner and web flashers that take a single image at offset 0.
 
-**The launcher will ask where to put it.** That dialog — `Use <name>
-partition` / `Remove <name>` / `Cancel` — is not an error, it is the target
-picker, and a partition only appears in it if your file *fits*
+**The launcher will ask where to put it.** Recent M5Launcher versions open a
+target picker — `Use <name> partition` / `Remove <name>` / `Cancel` — before
+installing. On a small screen with a red border it reads like a failure; it is
+not. A partition only appears in that list if your file *fits*
 (`entry.size < requiredAppPartitionSize` skips the ones that do not, in the
 launcher's `partition_install_layout.cpp`). Pick a free slot to keep whatever
 is already installed, or `Use <name> partition` to replace it. The launcher's
@@ -249,10 +282,12 @@ paid for.
 ## Tests
 
 ```bash
-cd firmware && pio test -e native     # 69 tests, no hardware
-cd gateway  && python3 -m pytest -q   # 58 tests
-python3 tools/mutate.py firmware      # 10 mutations, all must be caught
-python3 tools/mutate.py gateway       # 6 mutations, all must be caught
+cd firmware && pio test -e native        # 69 tests, no hardware needed
+cd gateway  && python3 -m pytest -q      # 70 tests
+python3 -m pytest tools/tests -q         # 36 tests (image checks, generators)
+python3 tools/mutate.py firmware         # 10 mutations, all must be caught
+python3 tools/mutate.py gateway          # 6 mutations, all must be caught
+python3 tools/badges.py --check          # README badges are not stale
 ```
 
 Everything deterministic — JSON parsing, the command matcher, the overlay

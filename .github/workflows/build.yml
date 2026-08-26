@@ -42,6 +42,14 @@ jobs:
         working-directory: gateway
         run: python -m pytest -q
 
+      - name: Tool tests
+        run: python -m pytest tools/tests
+
+      # A badge is a claim. A stale one is a confident lie, so it gets the
+      # same drift check as the generated IR table.
+      - name: README badges are current
+        run: python tools/badges.py --check
+
       - name: Firmware core tests (host)
         working-directory: firmware
         run: pio test -e native

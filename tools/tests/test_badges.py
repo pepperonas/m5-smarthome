@@ -1,0 +1,134 @@
+"""The badge generator.
+
+A badge is a claim. If it drifts it becomes a confident lie, so the counting
+is pinned here and CI checks the rendered block for staleness — the same
+treatment the generated IR table gets, and for the same reason.
+"""
+
+import importlib.util
+import pathlib
+import re
+import sys
+
+import pytest
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location("badges", ROOT / "tools" / "badges.py")
+badges = importlib.util.module_from_spec(spec)
+sys.modules["badges"] = badges
+spec.loader.exec_module(badges)
+
+
+# --- counting -------------------------------------------------------------
+
+def test_firmware_tests_are_counted_from_the_runner():
+    n = badges.count_firmware_tests()
+    assert n > 0
+    # Every RUN_TEST must name a function that exists, or the count is fiction.
+    runner = (ROOT / "firmware" / "test" / "test_core" / "test_main.cpp").read_text()
+    names = re.findall(r"RUN_TEST\((\w+)\)", runner)
+    assert len(names) == n
+    assert len(set(names)) == n, "a test is registered twice"
+
+
+def test_registered_tests_are_actually_defined():
+    """A typo in RUN_TEST would not compile, but a stale registration in the
+    UI file would still inflate the badge."""
+    runner = (ROOT / "firmware" / "test" / "test_core" / "test_main.cpp").read_text()
+    ui = (ROOT / "firmware" / "test" / "test_core" / "test_ui.cpp").read_text()
+    defined = set(re.findall(r"^void (test_\w+)\(void\)\s*\{", runner + ui, re.M))
+    for name in re.findall(r"RUN_TEST\((\w+)\)", runner):
+        assert name in defined, f"{name} is registered but never defined"
+
+
+def test_mutations_are_counted_from_the_harness():
+    src = (ROOT / "tools" / "mutate.py").read_text()
+    n = badges.count_mutations()
+    assert n == len(re.findall(r'^\s{8}\("', src, re.M))
+    assert n >= 10, "the harness lost entries"
+
+
+def test_python_tests_are_collected_from_the_right_directory():
+    """Collecting from the repo root fails to import m5gw and silently
+    reports zero. A badge reading '0 tests' is worse than none."""
+    assert badges.count_python_tests("gateway/tests") > 0
+    assert badges.count_python_tests("tools/tests") > 0
+
+
+def test_counting_survives_a_project_level_addopts():
+    """pytest.ini contributes `-q`; stacked with ours that becomes `-qq`,
+    pytest stops printing the summary line, and the count breaks. Found by
+    this suite going red the moment a pytest.ini was added."""
+    import subprocess
+    out = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests", "--collect-only", "-q"],
+        capture_output=True, text=True, cwd=ROOT / "gateway")
+    assert "tests collected" not in out.stdout, (
+        "the fragile format came back; the fallback below is now untested")
+    assert badges.count_python_tests("gateway/tests") > 0
+
+
+def test_a_missing_suite_counts_as_zero_not_an_error():
+    assert badges.count_python_tests("does/not/exist") == 0
+
+
+def test_line_counting_excludes_build_output():
+    code, per_lang = badges.count_lines()
+    assert code > 1000
+    assert per_lang["C++"] > 0 and per_lang["Python"] > 0
+    # .pio holds megabytes of vendored library source; counting it would turn
+    # "lines of code" into "lines of somebody else's code".
+    assert code < 20000, "build or dependency output is being counted"
+
+
+def test_documentation_is_not_counted_as_code():
+    code, per_lang = badges.count_lines()
+    assert per_lang.get("Docs", 0) > 0
+    assert code == sum(v for k, v in per_lang.items() if k in badges.CODE_LANGS)
+    assert "Docs" not in badges.CODE_LANGS
+
+
+# --- rendering ------------------------------------------------------------
+
+def test_badge_escapes_characters_shields_treats_specially():
+    # A literal dash or underscore in a label would be eaten by shields.io.
+    out = badges.badge("board", "M5Cardputer ADV", "orange")
+    assert "M5Cardputer%20ADV" in out
+    assert "ESP32--S3" in badges.badge("platform", "ESP32-S3", "red")
+    assert "a__b" in badges.badge("x", "a_b", "red")
+
+
+def test_the_block_reports_the_measured_totals():
+    f = badges.facts()
+    block = badges.build_block(f)
+    assert f"tests-{f['tests_total']}%20passing" in block
+    assert f"{f['mutations']}%20caught" in block
+    assert "m5-smarthome" in block          # links point at this repo
+
+
+def test_every_badge_line_is_a_markdown_image():
+    block = badges.build_block(badges.facts())
+    for line in filter(None, block.splitlines()):
+        assert line.startswith("![") or line.startswith("[!["), line
+
+
+def test_readme_carries_the_markers():
+    text = badges.README.read_text()
+    assert badges.START in text and badges.END in text
+    assert text.index(badges.START) < text.index(badges.END)
+
+
+def test_the_committed_readme_is_up_to_date():
+    """The drift check CI runs. Same idea as the IR table: a stale artefact
+    that looks authoritative must not survive a push."""
+    text = badges.README.read_text()
+    expected = re.sub(
+        re.escape(badges.START) + r".*?" + re.escape(badges.END),
+        f"{badges.START}\n\n{badges.build_block(badges.facts())}\n\n{badges.END}",
+        text, flags=re.S)
+    assert text == expected, "run: python3 tools/badges.py"
+
+
+def test_check_mode_passes_on_a_current_readme():
+    sys.argv = ["badges.py", "--check"]
+    assert badges.main() == 0

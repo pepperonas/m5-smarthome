@@ -28,8 +28,14 @@ than quietly producing an application that can no longer be installed that way.
 import glob
 import hashlib
 import os
+import sys
 
 Import("env")                                    # noqa: F821 — injected by PlatformIO
+
+# PlatformIO execs this file inside SCons, where __file__ does not exist, so
+# the sibling module is located through the project directory instead.
+sys.path.insert(0, env.subst("$PROJECT_DIR"))    # noqa: F821
+import image_check                                # noqa: E402
 
 # Offsets are fixed by the ESP32-S3 boot ROM and the Arduino partition layout.
 BOOTLOADER_OFFSET = "0x0"
@@ -40,10 +46,7 @@ APP_OFFSET = "0x10000"
 # What an SD-card launcher offers as an app slot on this hardware. Exceeding
 # it does not break the esptool path, but it silently removes the way most
 # people install firmware on a Cardputer.
-LAUNCHER_SLOT_BYTES = 1536 * 1024
-
-# esp_app_desc_t magic, found at offset 0x20 of a valid application image.
-APP_DESC_MAGIC = 0xABCD5432
+LAUNCHER_SLOT_BYTES = image_check.LAUNCHER_SLOT_BYTES
 
 
 def find_boot_app0():
@@ -79,11 +82,7 @@ def check_is_app_image(path):
     """A launcher writes this into an app partition; a bootloader there bricks
     the boot. Cheap to verify, so verify it rather than trust the filename."""
     with open(path, "rb") as fh:
-        head = fh.read(0x24)
-    if len(head) < 0x24 or head[0] != 0xE9:
-        return False
-    magic = int.from_bytes(head[0x20:0x24], "little")
-    return magic == APP_DESC_MAGIC
+        return image_check.is_app_image(fh.read(0x24))
 
 
 def merge(source, target, env):                  # noqa: A002 — PlatformIO signature
@@ -104,7 +103,7 @@ def merge(source, target, env):                  # noqa: A002 — PlatformIO sig
         raise SystemExit(
             "merge_bin: firmware.bin is not a valid application image "
             "(no app descriptor at 0x20). Refusing to publish it as one.")
-    if app_size > LAUNCHER_SLOT_BYTES:
+    if not image_check.fits_launcher_slot(app_size):
         raise SystemExit(
             "merge_bin: the application is %d bytes, over the %d-byte app slot "
             "an SD-card launcher offers. It would still flash over USB, but "
@@ -117,7 +116,8 @@ def merge(source, target, env):                  # noqa: A002 — PlatformIO sig
         dst.write(src.read())
     write_digest(launcher_bin)
     print("merge_bin: %s (%d bytes, %d%% of the %d KB launcher slot)"
-          % (launcher_bin, app_size, 100 * app_size // LAUNCHER_SLOT_BYTES,
+          % (launcher_bin, app_size,
+             image_check.slot_usage_percent(app_size),
              LAUNCHER_SLOT_BYTES // 1024))
 
     # --- the whole image, for esptool and M5Burner ------------------------

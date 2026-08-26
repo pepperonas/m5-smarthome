@@ -56,7 +56,8 @@ Fails the build if the app outgrows the launcher slot or is not a valid app imag
 CI asserts on the image bytes that the launcher binary really is an application
 Attaches binaries and SHA256SUMS to every tagged release, built by CI not a laptop
 Leaves a downloadable build on every commit to main, between releases
-CI runs both suites, both mutation harnesses, and checks the IR table for drift
+CI runs all three suites, both mutation harnesses, and checks the IR table for drift
+Generates README badges from measured facts and fails CI when they go stale
 
 ## Tooling
 Generates the Teufel IR table from the canonical CSV instead of duplicating it
