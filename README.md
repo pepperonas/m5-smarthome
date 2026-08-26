@@ -13,14 +13,14 @@
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
 ![tool tests: 53](https://img.shields.io/badge/tool%20tests-53-brightgreen?style=flat-square)
 ![mutation probes: 16 caught](https://img.shields.io/badge/mutation%20probes-16%20caught-8A2BE2?style=flat-square)
-![lines of code: 7 223](https://img.shields.io/badge/lines%20of%20code-7%20223-blue?style=flat-square)
+![lines of code: 7 235](https://img.shields.io/badge/lines%20of%20code-7%20235-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
 ![C++: 4 135 lines](https://img.shields.io/badge/C%2B%2B-4%20135%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 049 lines](https://img.shields.io/badge/Python-3%20049%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![Python: 3 061 lines](https://img.shields.io/badge/Python-3%20061%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)
@@ -307,7 +307,14 @@ python3 -m pytest tools/tests -q         # 36 tests (image checks, generators)
 python3 tools/mutate.py firmware         # 10 mutations, all must be caught
 python3 tools/mutate.py gateway          # 6 mutations, all must be caught
 python3 tools/badges.py --check          # README badges are not stale
+python3 tools/scan_secrets.py --with-local   # no credentials in tree or binaries
+
+./tools/preflight.sh                     # all of the above, in the right order
 ```
+
+The order in `preflight.sh` is load-bearing: adding a test changes the
+test-count badge, so the badges are regenerated *before* the drift check, not
+after. Running the steps by hand got that wrong once.
 
 Everything deterministic — JSON parsing, the command matcher, the overlay
 logic, NEC framing, the timing policy — lives in hardware-free modules under
