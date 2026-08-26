@@ -65,6 +65,14 @@ Generates README badges from measured facts and fails CI when they go stale
 Scans tree and built binaries for secrets by reading bytes, never shelling to grep
 Optional personal build bakes in credentials; the published environment cannot
 
+## Documentation
+Every key the firmware handles is checked against the README key table, both ways
+Every gateway action is checked against its row in docs/API.md
+Effect, mode and input lists are checked for agreement between firmware and gateway
+Internal anchors and cross-document links are checked to resolve
+Test counts are refused in prose and generated into badges instead
+Pitfalls document collects the Cardputer traps that cost this project time
+
 ## Tooling
 Generates the Teufel IR table from the canonical CSV instead of duplicating it
 Mutation harness that breaks each guarantee and requires the suite to notice

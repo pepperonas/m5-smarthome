@@ -8,25 +8,39 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 219 passing](https://img.shields.io/badge/tests-219%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![tests: 234 passing](https://img.shields.io/badge/tests-234%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
 ![firmware tests: 88](https://img.shields.io/badge/firmware%20tests-88-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
-![tool tests: 60](https://img.shields.io/badge/tool%20tests-60-brightgreen?style=flat-square)
+![tool tests: 75](https://img.shields.io/badge/tool%20tests-75-brightgreen?style=flat-square)
 ![mutation probes: 18 caught](https://img.shields.io/badge/mutation%20probes-18%20caught-8A2BE2?style=flat-square)
-![lines of code: 7 905](https://img.shields.io/badge/lines%20of%20code-7%20905-blue?style=flat-square)
+![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
+![lines of code: 8 235](https://img.shields.io/badge/lines%20of%20code-8%20235-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
 ![C++: 4 608 lines](https://img.shields.io/badge/C%2B%2B-4%20608%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 217 lines](https://img.shields.io/badge/Python-3%20217%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![Python: 3 547 lines](https://img.shields.io/badge/Python-3%20547%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
+![aggregates: 10 backends](https://img.shields.io/badge/aggregates-10%20backends-informational?style=flat-square)
+![write API: 14 named actions](https://img.shields.io/badge/write%20API-14%20named%20actions-informational?style=flat-square)
+![tested core: 8 pure modules](https://img.shields.io/badge/tested%20core-8%20pure%20modules-informational?style=flat-square)
+
 ![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)
-![secrets in repo: zero](https://img.shields.io/badge/secrets%20in%20repo-zero-success?style=flat-square)
+![secrets in repo: zero](https://img.shields.io/badge/secrets%20in%20repo-zero-success?logo=gnuprivacyguard&logoColor=white&style=flat-square)
+![TLS on device: not needed](https://img.shields.io/badge/TLS%20on%20device-not%20needed-success?style=flat-square)
+![fog machine: double interlocked](https://img.shields.io/badge/fog%20machine-double%20interlocked-critical?style=flat-square)
+![failed poll: never blank](https://img.shields.io/badge/failed%20poll-never%20blank-success?style=flat-square)
+
 ![gateway: Flask](https://img.shields.io/badge/gateway-Flask-000000?logo=flask&logoColor=white&style=flat-square)
-![docs: 5 documents](https://img.shields.io/badge/docs-5%20documents-informational?logo=markdown&logoColor=white&style=flat-square)
+![runs on: Raspberry Pi](https://img.shields.io/badge/runs%20on-Raspberry%20Pi-A22846?logo=raspberrypi&logoColor=white&style=flat-square)
+![service: systemd](https://img.shields.io/badge/service-systemd-30D475?logo=linux&logoColor=black&style=flat-square)
+![protocol: HTTP + NEC IR](https://img.shields.io/badge/protocol-HTTP%20%2B%20NEC%20IR-informational?style=flat-square)
+![docs: 6 documents](https://img.shields.io/badge/docs-6%20documents-informational?logo=markdown&logoColor=white&style=flat-square)
+![UI language: Deutsch](https://img.shields.io/badge/UI%20language-Deutsch-informational?style=flat-square)
+![code style: commented for the next reader](https://img.shields.io/badge/code%20style-commented%20for%20the%20next%20reader-informational?style=flat-square)
 
 <!-- badges:end -->
 
@@ -58,6 +72,17 @@ associating.
 ```
 
 <!-- Photo of the device on the home screen goes here. -->
+
+**Contents** — [Why a gateway](#why-a-gateway) · [Hardware](#hardware) ·
+[Getting it running](#getting-it-running) · [Keys](#keys) ·
+[When something is wrong](#when-something-is-wrong) ·
+[Honesty rules](#honesty-rules-the-display-follows) · [Tests](#tests) ·
+[Layout](#layout) · [Status](#status)
+
+**Documentation** — [Architecture](docs/ARCHITECTURE.md) ·
+[Gateway API](docs/API.md) · [Running the gateway](docs/GATEWAY.md) ·
+[Testing](docs/TESTING.md) · [Pitfalls](docs/PITFALLS.md) ·
+[What is not measured](docs/MEASURE.md)
 
 ---
 
@@ -114,8 +139,8 @@ cd m5-smarthome/gateway
 ./deploy.sh <your-pi-ssh-host>      # tests, rsync, venv, token, systemd
 ```
 
-`deploy.sh` generates a token on first run and stores it in
-`/home/pi/apps/m5-gateway/.env` with mode 600. It is never printed to a repo
+The gateway listens on **port 5010** and `deploy.sh` generates a token on
+first run, storing it in `/home/pi/apps/m5-gateway/.env` with mode 600. It is never printed to a repo
 and never leaves the Pi. Read it back when you set up the device:
 
 ```bash
@@ -237,6 +262,7 @@ configuration.
 | `u` | over-the-air update mode | — |
 | `w` | — | Teufel only: switch between network and infrared |
 | `m` | — | Yamaha / Teufel: mute |
+| `p` | — | Yamaha / Teufel: power (same as Enter) |
 | `i` | — | Yamaha / Teufel: step through inputs |
 | `e` | — | Strip: step through the 13 effects |
 | `o` | — | Disco: step through the 6 modes |
@@ -305,17 +331,26 @@ paid for.
 
 ## Tests
 
+The shape of it: everything deterministic is pure and runs on the host;
+everything touching hardware is a thin adapter whose invariants are pinned
+against its source. [`docs/TESTING.md`](docs/TESTING.md) explains why the
+second half exists — twice, the worst bug in this project sat in code declared
+too thin to test.
+
 ```bash
-cd firmware && pio test -e native        # 69 tests, no hardware needed
-cd gateway  && python3 -m pytest -q      # 70 tests
-python3 -m pytest tools/tests -q         # 36 tests (image checks, generators)
-python3 tools/mutate.py firmware         # 10 mutations, all must be caught
-python3 tools/mutate.py gateway          # 6 mutations, all must be caught
+cd firmware && pio test -e native        # the pure core, no hardware needed
+cd gateway  && python3 -m pytest -q      # aggregation, actions, XML, I/O
+python3 -m pytest tools/tests            # image checks, generators, doc drift
+python3 tools/mutate.py firmware         # break each guarantee, expect red
+python3 tools/mutate.py gateway
 python3 tools/badges.py --check          # README badges are not stale
 python3 tools/scan_secrets.py --with-local   # no credentials in tree or binaries
 
 ./tools/preflight.sh                     # all of the above, in the right order
 ```
+
+Current counts live in the badges at the top, which are generated — a number
+written into a sentence here was wrong within a day, three times over.
 
 The order in `preflight.sh` is load-bearing: adding a test changes the
 test-count badge, so the badges are regenerated *before* the drift check, not
@@ -331,6 +366,12 @@ the fog interlock, let a broken reply wipe the last good state, make an IR
 press count as confirmed, …) and fails if the suite does not go red. A test
 you have never seen fail is not an assurance.
 
+Documentation is checked too: every key the firmware handles must appear in
+the table above, every gateway action must have a row in
+[`docs/API.md`](docs/API.md), and the effect and mode lists must agree between
+firmware and gateway. Prose drifts silently — nothing breaks when a key is
+added and the table is not, and the reader trusts the table.
+
 ## Layout
 
 ```
@@ -340,10 +381,45 @@ firmware/src/        Arduino shell: display, keyboard, Wi-Fi task, IR, NVS
 gateway/m5gw/        Flask app: aggregate (pure), actions (pure), backends (I/O)
 tools/               IR table generator, mutation harness, sleep probe
 vendor/              the canonical Teufel IR mapping, copied with provenance
-docs/                architecture, API contract, gateway operations, measuring
+docs/                architecture, API contract, gateway operations,
+                     testing, pitfalls, what is not measured
 ```
 
-## Troubleshooting
+Building anything on a Cardputer? [`docs/PITFALLS.md`](docs/PITFALLS.md) is
+the part of this repository most likely to be useful to you: the consuming
+`isChange()`, why a launcher needs a different file from esptool, the three
+Wi-Fi settings that present as "the network is down", and the pins that are
+written down in the vendor library rather than guessed.
+
+## When something is wrong
+
+**Press `d` on the home screen.** The device has no cable and no console, so
+it reports on itself:
+
+```
+Diagnose
+WLAN online  192.168.178.42  -52 dBm
+http://192.168.178.105:5010/api/dash
+HTTP 200, 721 B                      ← or: Fehler: HTTP -11 read Timeout
+Abrufe 12, davon Fehler 0
+Snapshot: 2s alt, 6 Raeume           ← or: Snapshot: NIE geparst
+Heap 180000 B  Stack frei 3200 W
+```
+
+That one screen separates "no Wi-Fi" from "gateway refuses" from "reply will
+not parse", which is otherwise three rounds of guesswork. It sends nothing —
+a diagnostics screen that switches things would be a hazard exactly when
+somebody is poking at a misbehaving device.
+
+From the other end, the gateway answers the same questions:
+
+```bash
+T=$(ssh <pi> 'grep -oP "(?<=M5GW_TOKEN=).*" /home/pi/apps/m5-gateway/.env')
+curl -s -o /dev/null -w '%{http_code}  %{size_download} B  %{time_total}s\n' \
+     -H "Authorization: Bearer $T" http://<pi>:5010/api/dash
+```
+
+### Symptoms
 
 | Symptom | Cause |
 |---|---|
@@ -361,10 +437,12 @@ docs/                architecture, API contract, gateway operations, measuring
 ## Status
 
 The gateway is deployed and verified against the live house. The firmware
-compiles (RAM 17.3 %, flash 33.0 %) and its pure core is covered by host
-tests. **On-device measurements — quiescent current, wake-to-usable time,
-frame rate, infrared range — were not taken: no Cardputer was attached while
-this was built.** [`docs/MEASURE.md`](docs/MEASURE.md) is the procedure for
+compiles at **RAM 17.5 %, flash 29.5 %** (987 389 bytes — 62 % of the 1536 KB
+slot an SD-card launcher offers), and its pure core is covered by host tests.
+
+**On-device measurements — quiescent current, wake-to-usable time, frame rate,
+infrared range — were not taken: no Cardputer was attached while this was
+built.** [`docs/MEASURE.md`](docs/MEASURE.md) is the procedure for
 filling those in, and `tools/sleep-probe/` is a ready-to-flash sketch that
 answers the sleep question first — `sleep-probe.bin` is attached to releases
 too, so it needs no toolchain.

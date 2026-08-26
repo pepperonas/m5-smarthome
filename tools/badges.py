@@ -148,6 +148,32 @@ def count_mutations():
 # updates them alongside the measurement.
 
 
+def count_docs():
+    return len(list((ROOT / "docs").glob("*.md")))
+
+
+def count_pure_modules():
+    """Modules in the tested core — the ratio that makes the rest testable."""
+    core = ROOT / "firmware" / "lib" / "core"
+    return len([p for p in core.glob("*.h")])
+
+
+def count_named_actions():
+    """Named gateway actions, i.e. the size of the write surface."""
+    src = (ROOT / "gateway" / "m5gw" / "actions.py").read_text()
+    src = re.sub(r"#[^\n]*", "", src)
+    pairs = set()
+    for grp in re.findall(r'action in \(([^)]+)\)', src):
+        pairs.update(re.findall(r'"(\w+)"', grp))
+    pairs.update(re.findall(r'action == "(\w+)"', src))
+    return len(pairs)
+
+
+def count_backends():
+    src = (ROOT / "gateway" / "m5gw" / "config.py").read_text()
+    return len(re.findall(r'os\.environ\.get\("M5GW_[A-Z]+",\s*"http', src))
+
+
 def snapshot_bytes():
     """The measured /api/dash payload, pinned by a gateway test."""
     test = (ROOT / "gateway" / "tests" / "test_aggregate.py").read_text()
@@ -198,6 +224,7 @@ def build_block(facts):
     b.append(badge("gateway tests", facts["tests_gateway"], "brightgreen"))
     b.append(badge("tool tests", facts["tests_tools"], "brightgreen"))
     b.append(badge("mutation probes", f"{facts['mutations']} caught", "8A2BE2"))
+    b.append(badge("doc drift", "checked in CI", "8A2BE2"))
     b.append(badge("lines of code", f"{facts['code_lines']:,}".replace(",", " "),
                    "blue"))
     b.append("")
@@ -213,10 +240,30 @@ def build_block(facts):
     b.append("")
 
     b.append(badge("snapshot", f"< {facts['snapshot']} B", "success"))
+    b.append(badge("aggregates", f"{facts['backends']} backends", "informational"))
+    b.append(badge("write API", f"{facts['actions']} named actions",
+                   "informational"))
+    b.append(badge("tested core", f"{facts['pure_modules']} pure modules",
+                   "informational"))
+    b.append("")
+
     b.append(badge("PSRAM required", "none", "success"))
-    b.append(badge("secrets in repo", "zero", "success"))
+    b.append(badge("secrets in repo", "zero", "success", "gnuprivacyguard",
+                   "white"))
+    b.append(badge("TLS on device", "not needed", "success"))
+    b.append(badge("fog machine", "double interlocked", "critical"))
+    b.append(badge("failed poll", "never blank", "success"))
+    b.append("")
+
     b.append(badge("gateway", "Flask", "000000", "flask", "white"))
-    b.append(badge("docs", "5 documents", "informational", "markdown", "white"))
+    b.append(badge("runs on", "Raspberry Pi", "A22846", "raspberrypi", "white"))
+    b.append(badge("service", "systemd", "30D475", "linux", "black"))
+    b.append(badge("protocol", "HTTP + NEC IR", "informational"))
+    b.append(badge("docs", f"{facts['docs']} documents", "informational",
+                   "markdown", "white"))
+    b.append(badge("UI language", "Deutsch", "informational"))
+    b.append(badge("code style", "commented for the next reader",
+                   "informational"))
 
     return "\n".join(b)
 
@@ -235,6 +282,10 @@ def facts():
         "tests_total": fw + gw + tools,
         "mutations": count_mutations(),
         "snapshot": snapshot_bytes(),
+        "docs": count_docs(),
+        "pure_modules": count_pure_modules(),
+        "actions": count_named_actions(),
+        "backends": count_backends(),
     }
 
 

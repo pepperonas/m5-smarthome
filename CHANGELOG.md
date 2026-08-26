@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased
+
+Three defects found by putting the firmware on real hardware, and the tooling
+added so the next one is found by a test instead.
+
+### Fixed
+- **No key did anything, on any screen.** The vendor's `isChange()` is
+  consuming — it updates its own last-seen state and returns false on a second
+  call — and the shell called it twice per loop, so every press was detected
+  and then read back as empty.
+- **The home screen ignored arrows and Enter.** Its cursor was never drawn and
+  `handleKey` had no case for it; only the digit shortcuts worked, which is
+  what I had been testing with.
+- **Three network settings that present as "the network is down":**
+  `HTTPClient::begin(url)` without an explicit client (deprecated, fights
+  `setReuse`, and pulled in ~117 KB of unused TLS — flash fell 33.1 % → 29.5 %),
+  `WiFi.setSleep(true)` adding ~100 ms per exchange on a device that
+  deep-sleeps anyway, and `WiFi.config()` without a DNS argument.
+
+### Added
+- **Diagnostics screen** on `d`: link state, IP, last URL, HTTP status or
+  transport error, request/failure counts, whether a snapshot ever parsed,
+  free heap, worker stack headroom. It sends nothing.
+- Inputs, strip effects and disco modes reachable from the device (`i`, `e`,
+  `o`) — the gateway accepted them all along.
+- mDNS discovery of the gateway, and a reset gesture that actually exists.
+- Over-the-air updates as an explicit mode on `u`.
+- A personal build environment that compiles credentials in from a gitignored
+  header; the published environment cannot see that file.
+- **Documentation drift tests**: every key the firmware handles must appear in
+  the README table, every gateway action must have a row in `docs/API.md`,
+  ports and enumerations must agree between firmware and gateway, internal
+  anchors and cross-document links must resolve, and no test count may be
+  written into prose.
+- `docs/TESTING.md` and `docs/PITFALLS.md`.
+- A secret scanner that reads bytes rather than shelling out to `grep`, and
+  `tools/preflight.sh`, which runs the whole gate in the order that makes it
+  true.
+
 ## 0.1.0 — 2026-08-26
 
 First release: gateway deployed and verified against the live house, firmware

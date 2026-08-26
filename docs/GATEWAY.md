@@ -121,14 +121,14 @@ Three of those (5008, 5009, 5011) are bound to `127.0.0.1` and are reachable
 ## Testing
 
 ```bash
-cd gateway && python3 -m pytest -q          # 58 tests
-python3 ../tools/mutate.py gateway          # 6 mutations, all must be caught
+cd gateway && python3 -m pytest -q
+python3 ../tools/mutate.py gateway          # every mutation must be caught
 ```
 
 The mutation harness removes the fog interlock, makes toggles guess, stops
 marking stale sources, lets entertainment zones leak into the room list, makes
 an empty token mean "no auth", and bypasses the cache. Each must turn the
-suite red. It restores every file in a `finally` — an earlier ad-hoc version
+suite red. Current counts are in the README badges, which are generated. It restores every file in a `finally` — an earlier ad-hoc version
 crashed mid-run and left three mutated files in the tree, which is exactly the
 failure it now guards against.
 

@@ -42,7 +42,9 @@ jobs:
         working-directory: gateway
         run: python -m pytest -q
 
-      - name: Tool tests
+      # Includes the documentation drift checks: keys, actions, ports,
+      # enumerations, anchors and cross-document links.
+      - name: Tool and documentation tests
         run: python -m pytest tools/tests
 
       # A badge is a claim. A stale one is a confident lie, so it gets the

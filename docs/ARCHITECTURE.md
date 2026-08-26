@@ -121,6 +121,7 @@ runs under `pio test -e native`:
 | module | what it decides |
 |---|---|
 | `dash` | the model of the house and how a snapshot is parsed into it |
+| `keymap` | a keyboard report to a key press |
 | `command` | fuzzy matching for the typed command line |
 | `optimistic` | which local assumptions override the snapshot, and for how long |
 | `netplan` | poll intervals, backlight steps, sleep threshold, backoff |
@@ -129,8 +130,21 @@ runs under `pio test -e native`:
 | `ir_teufel` | the code table, generated from the canonical CSV |
 
 The shell in `firmware/src` draws, reads keys, runs the radio and toggles a
-GPIO at 38 kHz. It decides nothing, so it needs no tests it could not honestly
-run.
+GPIO at 38 kHz. It decides as little as possible.
+
+That "as little as possible" is a correction, not a boast. The shell was first
+written as a layer too thin to be worth testing, and it then held the two
+worst defects in the project: a keyboard read that called the vendor's
+*consuming* `isChange()` twice, so every key press was detected and then read
+back as empty, and a home screen whose cursor was never drawn while Enter had
+no handler at all. Both were invisible to every test and to every review,
+because nothing was looking.
+
+So the mapping moved into `keymap` where it is tested, and what genuinely
+cannot leave the shell is pinned against its own source by
+`tools/tests/test_firmware_shell.py`: one `isChange()` per read, no direct
+keyboard polling in `loop()`, no arrow mapping outside the core. Weaker than
+running it, and far stronger than nothing. See [PITFALLS.md](PITFALLS.md).
 
 ### Nothing blocks the key handler
 
@@ -165,6 +179,19 @@ The header says `IR unbestaetigt` while such a claim is live, and the Teufel
 tile carries a `~` on every frame regardless.
 
 Two control paths that both claim certainty are worse than one.
+
+## Saying what is wrong
+
+The device has no cable and no console. `d` on the home screen reports link
+state, its own IP, the exact URL last requested, the last HTTP status or
+transport error, request and failure counts, whether a snapshot was ever
+parsed, free heap and worker stack headroom.
+
+It exists because this project spent three rounds inferring what a device was
+doing from a description of its screen. One screen separates "no Wi-Fi" from
+"gateway refuses" from "reply will not parse". It sends nothing: a diagnostics
+screen that switches things would be a hazard exactly when somebody is poking
+at a misbehaving device.
 
 ## Power, and the second it has to answer in
 
