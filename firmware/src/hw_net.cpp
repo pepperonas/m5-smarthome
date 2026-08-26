@@ -50,14 +50,24 @@ bool connectWifi() {
 
     const uint32_t t0 = millis();
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(true);              // modem sleep between beacons
+    // Modem sleep is wrong for this device. It parks the radio between
+    // beacons, which adds up to ~100 ms of latency per exchange — and this
+    // thing is only awake for a few seconds at a time before deep sleep,
+    // where the radio is off entirely. Trading responsiveness for power we
+    // are not spending anyway is a bad deal, and the added latency made
+    // short HTTP timeouts fire.
+    WiFi.setSleep(false);
     WiFi.persistent(false);
 
     if (haveHint) {
         if (hint.ip && hint.gw && hint.mask) {
             // Reusing the last lease skips the DHCP round trip as well.
+            // The DNS argument is not optional in practice: WiFi.config()
+            // without it leaves the resolver empty, and anything that later
+            // uses a hostname — mDNS fallback, a moved gateway — fails in a
+            // way that looks like the network is down.
             WiFi.config(IPAddress(hint.ip), IPAddress(hint.gw),
-                        IPAddress(hint.mask));
+                        IPAddress(hint.mask), IPAddress(hint.gw));
         }
         WiFi.begin(g_cfg.ssid, g_cfg.pass, hint.channel, hint.bssid, true);
     } else {
@@ -94,6 +104,8 @@ bool connectWifi() {
 
     g_status.link = LinkState::Online;
     g_status.rssi = WiFi.RSSI();
+    snprintf(g_status.ip, sizeof(g_status.ip), "%s",
+             WiFi.localIP().toString().c_str());
     g_status.connectMs = millis() - t0;
     g_status.usedFastPath = haveHint;
     g_status.failures = 0;
@@ -128,7 +140,10 @@ void buildUrl(char* out, size_t cap, const char* path) {
 }
 
 void runJob(const Job& job) {
-    Reply r;
+    // Static, not on the stack: this struct is ~1.6 KB and the worker stack
+    // is a few KB shared with the whole HTTP path. Only one job runs at a
+    // time, so a single instance is safe.
+    static Reply r;
     r.isDash = job.isDash;
     r.overlayToken = job.overlayToken;
     r.ok = false;
@@ -148,11 +163,22 @@ void runJob(const Job& job) {
     char url[96];
     buildUrl(url, sizeof(url), job.isDash ? "/api/dash" : "/api/act");
 
+    snprintf(g_status.url, sizeof(g_status.url), "%s", url);
+    ++g_status.requests;
+
+    // An explicit WiFiClient rather than the URL-only overload: that one is
+    // deprecated and manages its own client, which interacts badly with
+    // setReuse across differing requests.
+    WiFiClient client;
     HTTPClient http;
-    http.setConnectTimeout(1500);
-    http.setTimeout(job.isDash ? 2000 : 4000);
-    http.setReuse(true);
-    if (!http.begin(url)) {
+    http.setConnectTimeout(2500);
+    // Generous on purpose. The gateway answers a cold snapshot in ~0.3 s over
+    // Ethernet, but this hop is Wi-Fi from a sleeping radio, and a timeout
+    // that fires early looks exactly like a dead backend.
+    http.setTimeout(job.isDash ? 6000 : 8000);
+    if (!http.begin(client, url)) {
+        ++g_status.failed;
+        snprintf(g_status.lastError, sizeof(g_status.lastError), "begin() failed");
         xQueueOverwrite(g_replies, &r);
         return;
     }
@@ -168,6 +194,18 @@ void runJob(const Job& job) {
         code = http.POST((uint8_t*)job.body, strlen(job.body));
     }
     r.status = code;
+    g_status.lastStatus = code;
+    if (code <= 0) {
+        ++g_status.failed;
+        snprintf(g_status.lastError, sizeof(g_status.lastError), "HTTP %d %s",
+                 code, HTTPClient::errorToString(code).c_str());
+    } else if (code < 200 || code >= 300) {
+        ++g_status.failed;
+        snprintf(g_status.lastError, sizeof(g_status.lastError),
+                 "HTTP %d", code);
+    } else {
+        g_status.lastError[0] = 0;
+    }
     if (code > 0) {
         String payload = http.getString();
         const size_t n = payload.length() < (size_t)kMaxBody - 1
@@ -177,6 +215,9 @@ void runJob(const Job& job) {
         r.len = static_cast<uint16_t>(n);
         r.ok = (code >= 200 && code < 300);
     }
+    g_status.lastBytes = r.len;
+    g_status.freeHeap = ESP.getFreeHeap();
+    g_status.stackHighWater = uxTaskGetStackHighWaterMark(nullptr);
     http.end();
 
     // A transport failure (not an HTTP error) can mean the gateway moved.
@@ -216,7 +257,9 @@ void begin(const store::Config& cfg) {
     g_status.link = LinkState::Connecting;
     // Pinned to core 0 so the UI task on core 1 keeps its frame time even
     // while TLS-free HTTP and Wi-Fi housekeeping run.
-    xTaskCreatePinnedToCore(worker, "m5net", 8192, nullptr, 3, &g_task, 0);
+    // 12 KB: HTTPClient plus the Wi-Fi stack is not cheap, and a stack
+    // overflow here would look like an unexplained reboot.
+    xTaskCreatePinnedToCore(worker, "m5net", 12288, nullptr, 3, &g_task, 0);
 }
 
 bool requestDash() {

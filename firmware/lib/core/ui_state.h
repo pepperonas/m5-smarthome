@@ -14,6 +14,7 @@ namespace core {
 
 enum class Screen : uint8_t {
     Home, Rooms, Lichtwerk, Yamaha, Teufel, Disco, Fog, Climate, Console,
+    Diagnostics,
 };
 
 // A key, already normalised by the keyboard adapter.

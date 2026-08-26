@@ -350,6 +350,38 @@ void test_cycle_lists_match_the_gateway_whitelists(void) {
     }
 }
 
+void test_diagnostics_is_reachable_and_leavable(void) {
+    // On a device with no cable and no console, this screen is the only way
+    // to find out why nothing works. It must never become unreachable.
+    Dash d = makeDash();
+    UiState st;
+    handleKey(st, chr('d'), d, 1000);
+    TEST_ASSERT_TRUE(st.screen == Screen::Diagnostics);
+    handleKey(st, escKey(), d, 1000);
+    TEST_ASSERT_TRUE(st.screen == Screen::Home);
+}
+
+void test_diagnostics_sends_nothing(void) {
+    // It is a read-out. A diagnostics screen that switches things would be a
+    // hazard exactly when someone is poking at a misbehaving device.
+    Dash d = makeDash();
+    UiState st;
+    st.screen = Screen::Diagnostics;
+    for (const char* k : {"1", "+", "-", "m", "w", "e"}) {
+        TEST_ASSERT_FALSE(handleKey(st, chr(k[0]), d, 1000).intent.valid);
+    }
+    TEST_ASSERT_FALSE(handleKey(st, enterKey(), d, 1000).intent.valid);
+}
+
+void test_the_diagnostics_key_does_not_collide(void) {
+    // 'd' must not already mean something on the home screen.
+    Dash d = makeDash();
+    UiState st;
+    KeyResult r = handleKey(st, chr('d'), d, 1000);
+    TEST_ASSERT_FALSE(r.intent.valid);
+    TEST_ASSERT_TRUE(st.screen == Screen::Diagnostics);
+}
+
 void test_a_toast_expires(void) {
     UiState st;
     toast(st, "hallo", 1000);

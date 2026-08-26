@@ -37,6 +37,7 @@ One-letter typos are acted on; two typos only produce a suggestion
 Optimistic rendering: the screen reacts on the press, the request follows
 Rolls the display back and says so when the gateway refuses an action
 Never renders a failed poll as "no data" — last value stays, marked stale
+Diagnostics screen on 'd': link, IP, last URL, HTTP status, snapshot age, heap
 Marks Teufel state as an estimate on every frame (the Pi only guesses it)
 Second control path over infrared for the Teufel, working without Wi-Fi
 Marks infrared-driven state unconfirmed until a network poll agrees

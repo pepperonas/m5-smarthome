@@ -198,6 +198,13 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
             st.pending = i;
             return out;
         }
+        // A device with no cable and no console must be able to explain
+        // itself, or the only debugging tool left is asking the owner what
+        // the screen says.
+        if (k.ch == 'd') {
+            st.screen = Screen::Diagnostics;
+            return out;
+        }
         if (k.ch == 'a') {
             out.intent = make("macro", "alloff");
             setStr(out.intent.label, sizeof(out.intent.label), "Alles aus");

@@ -8,18 +8,18 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 216 passing](https://img.shields.io/badge/tests-216%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
-![firmware tests: 85](https://img.shields.io/badge/firmware%20tests-85-brightgreen?style=flat-square)
+![tests: 219 passing](https://img.shields.io/badge/tests-219%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 88](https://img.shields.io/badge/firmware%20tests-88-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
 ![tool tests: 60](https://img.shields.io/badge/tool%20tests-60-brightgreen?style=flat-square)
 ![mutation probes: 18 caught](https://img.shields.io/badge/mutation%20probes-18%20caught-8A2BE2?style=flat-square)
-![lines of code: 7 753](https://img.shields.io/badge/lines%20of%20code-7%20753-blue?style=flat-square)
+![lines of code: 7 905](https://img.shields.io/badge/lines%20of%20code-7%20905-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 4 456 lines](https://img.shields.io/badge/C%2B%2B-4%20456%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![C++: 4 608 lines](https://img.shields.io/badge/C%2B%2B-4%20608%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
 ![Python: 3 217 lines](https://img.shields.io/badge/Python-3%20217%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
@@ -233,6 +233,7 @@ configuration.
 | `` ` `` / `Esc` | — | back to Home |
 | `g` | Gute Nacht (asks first) | — |
 | `a` | everything off | — |
+| `d` | diagnostics (link, last HTTP status, snapshot age, heap) | — |
 | `u` | over-the-air update mode | — |
 | `w` | — | Teufel only: switch between network and infrared |
 | `m` | — | Yamaha / Teufel: mute |
@@ -349,6 +350,7 @@ docs/                architecture, API contract, gateway operations, measuring
 | Header says `kein WLAN`, values dimmed | Expected during a reconnect. Presses are queued and sent when the link returns. |
 | `abgelehnt` after pressing Enter on fog | The gateway's interlock. Confirm on the device first. |
 | Mute does nothing on the Teufel | Known and unexplained: byte `0x28` reaches the box and has no effect, while power and volume work. Not a firmware fault. |
+| Tiles show `?`, `-`, `0.0 dB`, `standby` | No snapshot has ever been parsed. Press `d`: it shows the link state, the exact URL tried, the last HTTP status and whether a snapshot was ever parsed. |
 | Everything stale, gateway healthy | Check the token: a wrong one gives 401 and the device keeps the old snapshot rather than blanking. |
 | Keys do nothing at all, on any screen | Fixed in the current build: the vendor's `isChange()` is consuming and was called twice per loop, so every press was read back as empty. If it persists and the splash said `Board nicht erkannt`, the library installed a do-nothing keyboard reader instead. |
 | Launcher shows `Use … partition` / `Remove …` / `Cancel` | Not an error — that is the target picker. Choose a slot; the file already passed its size and validity checks or the dialog would not have appeared. |

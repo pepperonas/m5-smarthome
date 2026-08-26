@@ -477,6 +477,10 @@ void test_digits_are_not_swallowed_by_the_arrow_mapping(void);
 void test_only_the_first_character_is_used(void);
 void test_the_output_is_untouched_when_there_is_no_event(void);
 
+void test_diagnostics_is_reachable_and_leavable(void);
+void test_diagnostics_sends_nothing(void);
+void test_the_diagnostics_key_does_not_collide(void);
+
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -557,6 +561,9 @@ int main(int, char**) {
     RUN_TEST(test_iris_warn_is_not_in_the_effect_cycle);
     RUN_TEST(test_the_effect_key_yields_while_strip_warn_owns_the_strip);
     RUN_TEST(test_cycle_lists_match_the_gateway_whitelists);
+    RUN_TEST(test_diagnostics_is_reachable_and_leavable);
+    RUN_TEST(test_diagnostics_sends_nothing);
+    RUN_TEST(test_the_diagnostics_key_does_not_collide);
     RUN_TEST(test_a_toast_expires);
     RUN_TEST(test_keys_that_mean_nothing_here_do_nothing);
     RUN_TEST(test_no_event_when_nothing_changed);

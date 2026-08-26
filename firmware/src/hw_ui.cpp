@@ -295,6 +295,52 @@ void drawDetail(const core::UiState& st, const core::Dash& d) {
     }
 }
 
+void drawDiagnostics(const core::Dash& d, uint32_t nowMs,
+                     const net::Status& link) {
+    char buf[52];
+    text(6, kContentY, "Diagnose", kAccent);
+
+    const char* linkName = link.link == net::LinkState::Online ? "online"
+                         : link.link == net::LinkState::Connecting ? "verbindet"
+                         : link.link == net::LinkState::Failed ? "fehlgeschlagen"
+                         : "aus";
+    snprintf(buf, sizeof(buf), "WLAN %s  %s  %d dBm", linkName, link.ip,
+             link.rssi);
+    text(6, kContentY + kRowH, buf,
+         link.link == net::LinkState::Online ? kFg : kWarn);
+
+    text(6, kContentY + kRowH * 2, link.url[0] ? link.url : "(noch kein Abruf)",
+         kDim);
+
+    // The single most useful line: what the gateway actually answered.
+    if (link.lastError[0]) {
+        snprintf(buf, sizeof(buf), "Fehler: %s", link.lastError);
+        text(6, kContentY + kRowH * 3, buf, kWarn);
+    } else if (link.lastStatus) {
+        snprintf(buf, sizeof(buf), "HTTP %d, %u B", link.lastStatus,
+                 (unsigned)link.lastBytes);
+        text(6, kContentY + kRowH * 3, buf, kOn);
+    } else {
+        text(6, kContentY + kRowH * 3, "noch keine Antwort", kDim);
+    }
+
+    snprintf(buf, sizeof(buf), "Abrufe %lu, davon Fehler %lu",
+             (unsigned long)link.requests, (unsigned long)link.failed);
+    text(6, kContentY + kRowH * 4, buf, kFg);
+
+    if (d.valid) {
+        snprintf(buf, sizeof(buf), "Snapshot: %lus alt, %d Raeume",
+                 (unsigned long)(core::ageMs(d, nowMs) / 1000), d.hue.count);
+        text(6, kContentY + kRowH * 5, buf, kFg);
+    } else {
+        text(6, kContentY + kRowH * 5, "Snapshot: NIE geparst", kWarn);
+    }
+
+    snprintf(buf, sizeof(buf), "Heap %lu B  Stack frei %lu W",
+             (unsigned long)link.freeHeap, (unsigned long)link.stackHighWater);
+    text(6, kContentY + kRowH * 6, buf, kDim);
+}
+
 void drawConsole(const core::UiState& st) {
     text(6, kContentY, "Befehl:", kAccent);
     char line[48];
@@ -337,7 +383,7 @@ void draw(const core::UiState& st, const core::Dash& d, uint32_t nowMs,
 
     drawHeader(d, nowMs, link, batteryPct, unconfirmed);
 
-    const char* hint = ";. waehlen  Enter oeffnen  / Befehl";
+    const char* hint = ";. waehlen  Enter oeffnen  d Diagnose";
     switch (st.screen) {
         case core::Screen::Home:    drawHome(st, d, nowMs); break;
         case core::Screen::Rooms:
@@ -345,6 +391,10 @@ void draw(const core::UiState& st, const core::Dash& d, uint32_t nowMs,
             hint = "Enter schaltet  +/- Helligkeit";
             break;
         case core::Screen::Console: drawConsole(st); hint = nullptr; break;
+        case core::Screen::Diagnostics:
+            drawDiagnostics(d, nowMs, link);
+            hint = "Esc zurueck";
+            break;
         default:
             drawDetail(st, d);
             hint = "Enter schaltet  Esc zurueck";

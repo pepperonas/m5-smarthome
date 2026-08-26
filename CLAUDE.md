@@ -155,6 +155,20 @@ picks the TCA8418 reader for the ADV and the GPIO matrix for the original; for
 anything else it installs a do-nothing reader and prints to serial only. The
 firmware now says so on screen.
 
+**Press `d` before guessing.** The diagnostics screen reports link state, the
+device IP, the exact URL last requested, the last HTTP status or transport
+error, request/failure counts, whether a snapshot was ever parsed, free heap
+and worker stack headroom. It exists because this project spent two rounds
+guessing at a device nobody could attach a cable to.
+
+**Network settings that were wrong and looked like "the network is down":**
+`WiFi.config()` without the DNS argument leaves the resolver empty;
+`WiFi.setSleep(true)` parks the radio between beacons and adds ~100 ms per
+exchange, which made short HTTP timeouts fire on a device that deep-sleeps
+anyway; and `HTTPClient::begin(url)` without an explicit WiFiClient is
+deprecated, interacts badly with setReuse, and pulled in ~117 KB of TLS code
+that is never used here.
+
 ## House rules this code enforces
 
 These come from bugs the house has already paid for. Do not relax them.

@@ -22,6 +22,18 @@ struct Status {
     uint32_t connectMs = 0;      // how long the last association took
     bool usedFastPath = false;   // reconnected from the stored BSSID hint
     int failures = 0;
+
+    // Diagnostics. A device with no cable and no console has to be able to
+    // say why it is not working, or the only tool left is guesswork.
+    char ip[16] = {0};
+    char url[64] = {0};          // what it last tried to fetch
+    int lastStatus = 0;          // HTTP code, 0 = transport failure
+    uint16_t lastBytes = 0;
+    uint32_t requests = 0;
+    uint32_t failed = 0;
+    char lastError[40] = {0};
+    uint32_t freeHeap = 0;
+    uint32_t stackHighWater = 0; // words left on the worker stack
 };
 
 // Starts the worker task. Safe to call once from setup().
