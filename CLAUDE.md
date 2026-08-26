@@ -105,6 +105,14 @@ at 0 **and** the app descriptor 0xABCD5432 at offset 0x20. The launcher slot on
 this hardware is 1536 KB; the build fails past it rather than shipping
 something that can no longer be installed the usual way.
 
+**The launcher's target picker looks like an error and is not one.** `Use
+<name> partition` / `Remove <name>` / `Cancel` is where it asks which slot to
+write into. A partition is only listed when the file fits — the loop in
+`bmorcelli/Launcher`'s `src/partition_install_layout.cpp` skips entries with
+`entry.size < requiredAppPartitionSize` — so seeing the dialog means the image
+was accepted. Its actual rejections read `File is too big` / `file is not
+valid` and never reach the picker.
+
 ## House rules this code enforces
 
 These come from bugs the house has already paid for. Do not relax them.

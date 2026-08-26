@@ -119,6 +119,15 @@ esptool.py --chip esp32s3 --port /dev/cu.usbmodem* \
 partition table and OTA selector at their correct offsets, so it also works
 with M5Burner and web flashers that take a single image at offset 0.
 
+**The launcher will ask where to put it.** That dialog — `Use <name>
+partition` / `Remove <name>` / `Cancel` — is not an error, it is the target
+picker, and a partition only appears in it if your file *fits*
+(`entry.size < requiredAppPartitionSize` skips the ones that do not, in the
+launcher's `partition_install_layout.cpp`). Pick a free slot to keep whatever
+is already installed, or `Use <name> partition` to replace it. The launcher's
+real failures say `File is too big` or `file is not valid` and never get as far
+as asking.
+
 > ⚠️ **Do not hand the full image to a launcher.** The launcher writes the
 > file into an app partition, and a bootloader is not a valid application
 > there — the device comes up with nothing to run. The launcher wants
@@ -276,6 +285,7 @@ docs/                architecture, API contract, gateway operations, measuring
 | `abgelehnt` after pressing Enter on fog | The gateway's interlock. Confirm on the device first. |
 | Mute does nothing on the Teufel | Known and unexplained: byte `0x28` reaches the box and has no effect, while power and volume work. Not a firmware fault. |
 | Everything stale, gateway healthy | Check the token: a wrong one gives 401 and the device keeps the old snapshot rather than blanking. |
+| Launcher shows `Use … partition` / `Remove …` / `Cancel` | Not an error — that is the target picker. Choose a slot; the file already passed its size and validity checks or the dialog would not have appeared. |
 | Launcher installs it, device shows nothing / boot-loops | The full image was given to the launcher. Use `m5-smarthome.bin`, then reflash via USB once to recover. |
 | Setup screen on every boot | NVS did not persist — check that the partition table matches the 8 MB flash. |
 | Never finds the gateway | mDNS may be filtered on the network. Type the Pi's IP during setup instead; the field exists for exactly this. |
