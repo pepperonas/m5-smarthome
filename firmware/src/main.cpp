@@ -25,6 +25,7 @@
 #include "dash.h"
 #include "hw_ir.h"
 #include "hw_net.h"
+#include "hw_ota.h"
 #include "hw_store.h"
 #include "hw_ui.h"
 #include "ir_teufel.h"
@@ -365,6 +366,19 @@ void loop() {
 
         core::Dash view = g_dash;
         g_overlays.apply(view, now);
+        // 'u' on the home screen parks the device awake for an over-the-air
+        // update. Deliberately not a background listener: this thing sleeps
+        // after 30 s with its radio off, so an always-on OTA server would be
+        // either asleep when wanted or the reason the battery does not last.
+        // Handled here rather than in core, which knows nothing about radios.
+        if (k.ch == 'u' && g_ui.screen == core::Screen::Home &&
+            !g_ui.confirming) {
+            ota::runMode();
+            g_lastKeyMs = millis();
+            g_needRedraw = true;
+            return;
+        }
+
         const core::KeyResult res = core::handleKey(g_ui, k, view, now);
         if (res.intent.valid) sendIntent(res.intent, res.viaIr, now);
         if (res.redraw) g_needRedraw = true;

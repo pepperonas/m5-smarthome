@@ -48,6 +48,7 @@ Finds the gateway over mDNS when no address was typed, and remembers it
 Re-discovers the gateway once after a transport failure, in case the Pi moved
 Wipes stored credentials when a key is held for two seconds at power-on
 Exponential reconnect backoff, capped, with the UI staying usable throughout
+Over-the-air updates as an explicit mode, entered with one key, showing progress
 
 ## Tooling
 Generates the Teufel IR table from the canonical CSV instead of duplicating it

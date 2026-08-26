@@ -134,6 +134,7 @@ configuration.
 | `` ` `` / `Esc` | — | back to Home |
 | `g` | Gute Nacht (asks first) | — |
 | `a` | everything off | — |
+| `u` | over-the-air update mode | — |
 | `w` | — | Teufel only: switch between network and infrared |
 | `m` | — | Yamaha / Teufel: mute |
 | `i` | — | Yamaha / Teufel: step through inputs |
@@ -143,6 +144,20 @@ configuration.
 The arrows are the ones printed on `;` `.` `,` `/` — the Cardputer has no
 dedicated arrow keys. On the home screen there is nothing to move left or
 right through, so `/` is free for the command line there.
+
+### Updating without a cable
+
+Press `u` on the home screen. The device shows its IP address and waits:
+
+```bash
+cd firmware
+pio run -e cardputer -t upload --upload-port <the address on screen>
+```
+
+It is an explicit mode rather than a background listener, because this device
+sleeps after 30 s with its radio off — an always-on OTA server would be either
+asleep when you wanted it or the reason the battery did not last. `Esc` leaves
+the mode.
 
 ### The command line
 
@@ -229,7 +244,7 @@ docs/                architecture, API contract, gateway operations, measuring
 ## Status
 
 The gateway is deployed and verified against the live house. The firmware
-compiles (RAM 16.0 %, flash 31.8 %) and its pure core is covered by host
+compiles (RAM 17.3 %, flash 33.0 %) and its pure core is covered by host
 tests. **On-device measurements — quiescent current, wake-to-usable time,
 frame rate, infrared range — were not taken: no Cardputer was attached while
 this was built.** [`docs/MEASURE.md`](docs/MEASURE.md) is the procedure for

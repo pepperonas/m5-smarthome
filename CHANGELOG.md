@@ -34,7 +34,11 @@ complete and building, pure core covered by host tests.
 - Deep sleep with wake on the TCA8418 keyboard interrupt; fast reconnect from
   a remembered BSSID; last snapshot drawn from RTC memory before the radio is up.
 - Credentials typed on the device into NVS, never compiled in.
-- Builds at RAM 16.0 %, flash 31.8 %.
+- Finds the gateway over mDNS (`_m5gw._tcp`) when no address was typed;
+  re-discovers once after a transport failure.
+- Credentials wiped by holding a key for two seconds at power-on.
+- Over-the-air updates as an explicit mode on `u`, never a background listener.
+- Builds at RAM 17.3 %, flash 33.0 %.
 
 ### Tests
 - 69 host tests for the firmware core, 58 for the gateway.
