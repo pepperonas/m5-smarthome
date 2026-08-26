@@ -192,6 +192,7 @@ void drawDetail(const core::UiState& st, const core::Dash& d) {
             text(6, kContentY + kRowH * 2, buf, kFg);
             snprintf(buf, sizeof(buf), "Effekt:     %s", d.lw.effect);
             text(6, kContentY + kRowH * 3, buf, kFg);
+            text(6, kContentY + kRowH * 5, "e Effekt  +/- Helligkeit", kDim);
             if (d.lw.warnOwned) {
                 text(6, kContentY + kRowH * 4,
                      "Strip-Warn aktiv (Disco)", kWarn);
@@ -207,6 +208,7 @@ void drawDetail(const core::UiState& st, const core::Dash& d) {
             snprintf(buf, sizeof(buf), "Eingang:    %s", d.yam.input);
             text(6, kContentY + kRowH * 3, buf, kFg);
             if (d.yam.mute) text(6, kContentY + kRowH * 4, "STUMM", kWarn);
+            text(6, kContentY + kRowH * 5, "i Eingang  m Stumm  +/- Pegel", kDim);
             break;
 
         case core::Screen::Teufel:
@@ -222,6 +224,7 @@ void drawDetail(const core::UiState& st, const core::Dash& d) {
                      st.teufelUseIr ? "IR (blind)" : "Netz");
             text(6, kContentY + kRowH * 4, buf,
                  st.teufelUseIr ? kWarn : kAccent);
+            text(6, kContentY + kRowH * 5, "w Weg  i Eingang  +/- Pegel", kDim);
             break;
 
         case core::Screen::Disco:
@@ -234,6 +237,7 @@ void drawDetail(const core::UiState& st, const core::Dash& d) {
             text(6, kContentY + kRowH * 3, buf, kFg);
             snprintf(buf, sizeof(buf), "Modus:      %s", d.disco.mode);
             text(6, kContentY + kRowH * 4, buf, kFg);
+            text(6, kContentY + kRowH * 5, "o Modus  Enter schaltet", kDim);
             break;
 
         case core::Screen::Fog:

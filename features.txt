@@ -24,6 +24,8 @@ Ships as a systemd unit with a sandboxed non-root service
 Home screen with live tiles for lights, strip, receiver, amp, disco, fog, climate
 Digit keys 1-7 jump straight into an app, no menu walking
 Room list with per-room toggle and brightness on +/-
+Steps through receiver and amplifier inputs, strip effects and disco modes
+Refuses to repaint the strip while disco's strip-warn owns it
 Typed command line with fuzzy matching ("wohnzimmer aus", "flur 50", "nebel")
 Umlaut-folding so "küche", "kueche" and "kuche" all match
 Tab completion on room names and command aliases

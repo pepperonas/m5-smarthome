@@ -42,6 +42,11 @@ MUTATIONS = {
         ("NEC command complement is dropped", "lib/core/ir_nec.cpp",
          "    const uint8_t cmdInv = static_cast<uint8_t>(~command);",
          "    const uint8_t cmdInv = command;"),
+        ("a cycled action loses its name", "lib/core/ui_state.cpp",
+         "                setStr(out.intent.name, sizeof(out.intent.name),\n"
+         "                       kYamahaInputs[st.yamInput]);", "                (void)0;"),
+        ("the remote paints over strip-warn", "lib/core/ui_state.cpp",
+         "                if (d.lw.warnOwned) {", "                if (false) {"),
     ],
     "gateway": [
         ("the fog interlock is removed", "m5gw/actions.py",

@@ -168,6 +168,12 @@ void sendIntent(const core::Intent& in, bool viaIr, uint32_t nowMs) {
         // after the user answered the on-screen prompt.
         snprintf(body, sizeof(body),
                  "{\"target\":\"fog\",\"action\":\"on\",\"confirm\":true}");
+    } else if (in.name[0]) {
+        // input / effect / mode all take a single named value, and the
+        // parameter key is the action's own name.
+        snprintf(body, sizeof(body),
+                 "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":\"%s\"}",
+                 in.target, in.action, in.action, in.name);
     } else if (in.hasArg2) {
         const char* second = strcmp(in.action, "bri") == 0 ? "bri" : "value";
         if (in.hasArg) {

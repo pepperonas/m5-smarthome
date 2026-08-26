@@ -25,6 +25,9 @@ struct Intent {
     // Anything that ignites the fog machine must be confirmed by the user
     // *before* it is sent. The command line is exactly where a typo happens.
     bool needsConfirm = false;
+    // A named value the action needs: an input, an effect, a mode. Separate
+    // from `hint`, which is for telling the user why something did not work.
+    char name[16] = {0};
     char label[28] = {0};       // what to echo back: "Wohnzimmer aus"
     char hint[32] = {0};        // set when invalid: why, or the nearest match
 };

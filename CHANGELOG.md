@@ -23,7 +23,7 @@ complete and building, pure core covered by host tests.
 
 ### Firmware
 - Home screen, room list, and detail screens for strip, receiver, amplifier,
-  disco, fog and climate.
+  disco, fog and climate; inputs, strip effects and disco modes step on a key.
 - Digit keys jump straight into an app; typed command line with fuzzy German
   matching, umlaut folding and Tab completion.
 - Optimistic rendering with rollback on refusal; failed polls never render as
@@ -37,8 +37,8 @@ complete and building, pure core covered by host tests.
 - Builds at RAM 16.0 %, flash 31.8 %.
 
 ### Tests
-- 63 host tests for the firmware core, 58 for the gateway.
-- Mutation harness: 8 firmware and 6 gateway mutations, all caught.
+- 69 host tests for the firmware core, 58 for the gateway.
+- Mutation harness: 10 firmware and 6 gateway mutations, all caught.
 
 ### Not measured
 No Cardputer was attached during development. Quiescent current, wake-to-usable

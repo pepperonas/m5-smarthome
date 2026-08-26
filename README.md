@@ -127,6 +127,9 @@ To start over: hold `` ` `` while powering on, or run `store::erase()`.
 | `a` | everything off | — |
 | `w` | — | Teufel only: switch between network and infrared |
 | `m` | — | Yamaha / Teufel: mute |
+| `i` | — | Yamaha / Teufel: step through inputs |
+| `e` | — | Strip: step through the 13 effects |
+| `o` | — | Disco: step through the 6 modes |
 
 The arrows are the ones printed on `;` `.` `,` `/` — the Cardputer has no
 dedicated arrow keys. On the home screen there is nothing to move left or
@@ -175,9 +178,9 @@ paid for.
 ## Tests
 
 ```bash
-cd firmware && pio test -e native     # 63 tests, no hardware
+cd firmware && pio test -e native     # 69 tests, no hardware
 cd gateway  && python3 -m pytest -q   # 58 tests
-python3 tools/mutate.py firmware      # 8 mutations, all must be caught
+python3 tools/mutate.py firmware      # 10 mutations, all must be caught
 python3 tools/mutate.py gateway       # 6 mutations, all must be caught
 ```
 

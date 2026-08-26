@@ -452,6 +452,13 @@ void test_teufel_mute_warns_about_the_known_quirk(void);
 void test_a_toast_expires(void);
 void test_keys_that_mean_nothing_here_do_nothing(void);
 
+void test_input_cycling_carries_the_name(void);
+void test_input_cycling_wraps(void);
+void test_effect_and_mode_cycling_carry_names(void);
+void test_iris_warn_is_not_in_the_effect_cycle(void);
+void test_the_effect_key_yields_while_strip_warn_owns_the_strip(void);
+void test_cycle_lists_match_the_gateway_whitelists(void);
+
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -522,6 +529,12 @@ int main(int, char**) {
     RUN_TEST(test_an_unknown_command_reports_instead_of_acting);
     RUN_TEST(test_teufel_transport_can_be_switched_to_ir);
     RUN_TEST(test_teufel_mute_warns_about_the_known_quirk);
+    RUN_TEST(test_input_cycling_carries_the_name);
+    RUN_TEST(test_input_cycling_wraps);
+    RUN_TEST(test_effect_and_mode_cycling_carry_names);
+    RUN_TEST(test_iris_warn_is_not_in_the_effect_cycle);
+    RUN_TEST(test_the_effect_key_yields_while_strip_warn_owns_the_strip);
+    RUN_TEST(test_cycle_lists_match_the_gateway_whitelists);
     RUN_TEST(test_a_toast_expires);
     RUN_TEST(test_keys_that_mean_nothing_here_do_nothing);
     return UNITY_END();

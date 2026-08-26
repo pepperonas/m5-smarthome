@@ -230,6 +230,72 @@ void test_teufel_mute_warns_about_the_known_quirk(void) {
     TEST_ASSERT_TRUE(strstr(st.toast, "wirkungslos") != nullptr);
 }
 
+void test_input_cycling_carries_the_name(void) {
+    // Without a name the gateway answers 400: "input" alone says nothing
+    // about which input. This is the field main.cpp puts into the JSON.
+    Dash d = makeDash();
+    UiState st;
+    st.screen = Screen::Yamaha;
+    KeyResult r = handleKey(st, chr('i'), d, 1000);
+    TEST_ASSERT_TRUE(r.intent.valid);
+    TEST_ASSERT_EQUAL_STRING("input", r.intent.action);
+    TEST_ASSERT_TRUE(r.intent.name[0] != 0);
+    TEST_ASSERT_EQUAL_STRING(kYamahaInputs[1], r.intent.name);   // stepped once
+}
+
+void test_input_cycling_wraps(void) {
+    Dash d = makeDash();
+    UiState st;
+    st.screen = Screen::Teufel;
+    for (int i = 0; i < kTeufelInputCount; ++i) handleKey(st, chr('i'), d, 1000);
+    TEST_ASSERT_EQUAL(0, st.tfInput);            // back to the start
+}
+
+void test_effect_and_mode_cycling_carry_names(void) {
+    Dash d = makeDash();
+    d.lw.warnOwned = false;
+    UiState st;
+    st.screen = Screen::Lichtwerk;
+    KeyResult fx = handleKey(st, chr('e'), d, 1000);
+    TEST_ASSERT_EQUAL_STRING("effect", fx.intent.action);
+    TEST_ASSERT_EQUAL_STRING(kLwEffects[1], fx.intent.name);
+
+    st.screen = Screen::Disco;
+    KeyResult md = handleKey(st, chr('o'), d, 1000);
+    TEST_ASSERT_EQUAL_STRING("mode", md.intent.action);
+    TEST_ASSERT_EQUAL_STRING(kDiscoModes[1], md.intent.name);
+}
+
+void test_iris_warn_is_not_in_the_effect_cycle(void) {
+    // It belongs to the disco strip-warn path; the gateway refuses it anyway.
+    for (int i = 0; i < kLwEffectCount; ++i) {
+        TEST_ASSERT_TRUE(strcmp(kLwEffects[i], "iris_warn") != 0);
+    }
+}
+
+void test_the_effect_key_yields_while_strip_warn_owns_the_strip(void) {
+    // Painting over strip-warn would fight the disco audio engine for the
+    // same 600 LEDs.
+    Dash d = makeDash();
+    d.lw.warnOwned = true;
+    UiState st;
+    st.screen = Screen::Lichtwerk;
+    KeyResult r = handleKey(st, chr('e'), d, 1000);
+    TEST_ASSERT_FALSE(r.intent.valid);
+    TEST_ASSERT_TRUE(strstr(st.toast, "Strip-Warn") != nullptr);
+}
+
+void test_cycle_lists_match_the_gateway_whitelists(void) {
+    // A name the gateway does not know is a 400 the user cannot explain.
+    TEST_ASSERT_EQUAL(13, kLwEffectCount);
+    TEST_ASSERT_EQUAL(6, kDiscoModeCount);
+    TEST_ASSERT_EQUAL_STRING("rainbow", kDiscoModes[0]);
+    TEST_ASSERT_EQUAL_STRING("BLUETOOTH", kTeufelInputs[4]);
+    for (int i = 0; i < kYamahaInputCount; ++i) {
+        TEST_ASSERT_TRUE(kYamahaInputs[i][0] != 0);
+    }
+}
+
 void test_a_toast_expires(void) {
     UiState st;
     toast(st, "hallo", 1000);

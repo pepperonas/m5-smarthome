@@ -4,12 +4,41 @@
 #include <cstring>
 
 namespace core {
+
+// Verified against the receiver's own Input_Sel_Item list and the gateway
+// whitelists; anything not on these lists is refused server-side anyway.
+const char* const kYamahaInputs[] = {"Spotify", "AirPlay", "HDMI1", "HDMI2",
+                                     "HDMI3", "AV1", "TUNER", "AUX"};
+const int kYamahaInputCount = 8;
+
+const char* const kTeufelInputs[] = {"AUX", "LINE", "OPTICAL", "USB",
+                                     "BLUETOOTH"};
+const int kTeufelInputCount = 5;
+
+// Mirrors valid_effects in lichtwerk-controller, minus iris_warn, which
+// belongs to the disco strip-warn path.
+const char* const kLwEffects[] = {"solid", "rainbow", "pulse", "chase",
+                                  "sparkle", "strobe", "meteor", "breathe",
+                                  "sinelon", "juggle", "theater", "gradient",
+                                  "fire"};
+const int kLwEffectCount = 13;
+
+const char* const kDiscoModes[] = {"rainbow", "party", "random", "pulse",
+                                   "solid", "strobe"};
+const int kDiscoModeCount = 6;
+
 namespace {
 
 void setStr(char* dst, int cap, const char* src) {
     int n = 0;
     while (src && src[n] && n < cap - 1) { dst[n] = src[n]; ++n; }
     dst[n] = 0;
+}
+
+// Step an index forward and wrap. `dir` is +1 or -1.
+int cycle(int idx, int count, int dir) {
+    if (count <= 0) return 0;
+    return (idx + dir + count) % count;
 }
 
 Intent make(const char* target, const char* action, int arg = 0,
@@ -214,6 +243,22 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
                        d.lw.on ? "Strip aus" : "Strip an");
                 return out;
             }
+            if (k.ch == 'e' || k.right || k.left) {
+                // The strip belongs to strip-warn while disco drives it;
+                // painting over that would fight the audio engine.
+                if (d.lw.warnOwned) {
+                    toast(st, "Strip-Warn aktiv", nowMs);
+                    return out;
+                }
+                st.lwEffect = cycle(st.lwEffect, kLwEffectCount,
+                                    k.left ? -1 : 1);
+                out.intent = make("lw", "effect");
+                setStr(out.intent.name, sizeof(out.intent.name),
+                       kLwEffects[st.lwEffect]);
+                snprintf(out.intent.label, sizeof(out.intent.label), "Effekt %s",
+                         kLwEffects[st.lwEffect]);
+                return out;
+            }
             if (k.ch == '+' || k.ch == '-') {
                 int bri = (int)d.lw.bri + (k.ch == '+' ? 32 : -32);
                 if (bri < 0) bri = 0;
@@ -238,6 +283,15 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
                 out.intent = make("yam", "vol", step, true);
                 snprintf(out.intent.label, sizeof(out.intent.label), "%.1f dB",
                          (double)(d.yam.raw + step * 5) / 10.0);
+                return out;
+            }
+            if (k.ch == 'i') {
+                st.yamInput = cycle(st.yamInput, kYamahaInputCount, 1);
+                out.intent = make("yam", "input");
+                setStr(out.intent.name, sizeof(out.intent.name),
+                       kYamahaInputs[st.yamInput]);
+                snprintf(out.intent.label, sizeof(out.intent.label),
+                         "Eingang %s", kYamahaInputs[st.yamInput]);
                 return out;
             }
             if (k.ch == 'm') {
@@ -270,6 +324,15 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
                        step > 0 ? "Teufel lauter" : "Teufel leiser");
                 return out;
             }
+            if (k.ch == 'i') {
+                st.tfInput = cycle(st.tfInput, kTeufelInputCount, 1);
+                out.intent = make("tf", "input");
+                setStr(out.intent.name, sizeof(out.intent.name),
+                       kTeufelInputs[st.tfInput]);
+                snprintf(out.intent.label, sizeof(out.intent.label),
+                         "Eingang %s", kTeufelInputs[st.tfInput]);
+                return out;
+            }
             if (k.ch == 'm') {
                 out.intent = make("tf", "mute");
                 // Documented house quirk: this byte reaches the box and does
@@ -281,6 +344,16 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
         }
 
         case Screen::Disco: {
+            if (k.ch == 'o' || k.right || k.left) {
+                st.discoMode = cycle(st.discoMode, kDiscoModeCount,
+                                     k.left ? -1 : 1);
+                out.intent = make("disco", "mode");
+                setStr(out.intent.name, sizeof(out.intent.name),
+                       kDiscoModes[st.discoMode]);
+                snprintf(out.intent.label, sizeof(out.intent.label), "Modus %s",
+                         kDiscoModes[st.discoMode]);
+                return out;
+            }
             if (k.enter) {
                 out.intent = make("disco", d.disco.on ? "off" : "on");
                 setStr(out.intent.label, sizeof(out.intent.label),

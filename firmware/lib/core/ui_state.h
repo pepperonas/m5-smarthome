@@ -49,6 +49,13 @@ struct UiState {
     // fallback that also works while the Pi reboots.
     bool teufelUseIr = false;
 
+    // 'i' / 'e' / 'o' step through these. Kept as indices rather than names
+    // so a press is one increment and needs no string handling.
+    int yamInput = 0;
+    int tfInput = 0;
+    int lwEffect = 0;
+    int discoMode = 0;
+
     char toast[40] = {0};         // transient message under the header
     uint32_t toastUntilMs = 0;
 };
@@ -70,5 +77,16 @@ bool toastVisible(const UiState& st, uint32_t nowMs);
 int rowCount(const UiState& st, const Dash& d);
 
 constexpr uint32_t kToastMs = 2500;
+
+// Cycle lists. Short on purpose: a remote offers the inputs you actually use,
+// not every one the device enumerates.
+extern const char* const kYamahaInputs[];
+extern const int kYamahaInputCount;
+extern const char* const kTeufelInputs[];
+extern const int kTeufelInputCount;
+extern const char* const kLwEffects[];
+extern const int kLwEffectCount;
+extern const char* const kDiscoModes[];
+extern const int kDiscoModeCount;
 
 }  // namespace core

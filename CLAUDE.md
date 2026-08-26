@@ -15,7 +15,7 @@ context (the Pi, the apps, ports, deploy patterns) lives in
 ```bash
 # firmware
 cd firmware
-pio test -e native            # 63 host tests, no hardware needed
+pio test -e native            # 69 host tests, no hardware needed
 pio run  -e cardputer         # compile (RAM 16.0 %, flash 31.8 %)
 pio run  -e cardputer -t upload
 
@@ -25,7 +25,7 @@ python3 -m pytest -q          # 58 tests
 ./deploy.sh raspi5            # tests, rsync, venv, token, systemd, health
 
 # mutation probes — each breaks a guarantee and requires the suite to notice
-python3 tools/mutate.py firmware   # 8
+python3 tools/mutate.py firmware   # 10
 python3 tools/mutate.py gateway    # 6
 
 # regenerate the IR table after touching vendor/teufel-ir-mapping.csv
