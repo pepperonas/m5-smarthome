@@ -35,8 +35,9 @@ bool load(Config& out) {
     c.port = p.getUShort("port", 5010);
     p.end();
     // A gateway without a token is useless and a Wi-Fi without an SSID is
-    // meaningless, so both must be present before we call the config valid.
-    c.valid = c.ssid[0] != 0 && c.token[0] != 0 && c.host[0] != 0;
+    // meaningless. The host may be blank: mDNS can supply it, and asking the
+    // user for an IP address they would have to look up is a bad first run.
+    c.valid = c.ssid[0] != 0 && c.token[0] != 0;
     out = c;
     return c.valid;
 }

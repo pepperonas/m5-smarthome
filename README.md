@@ -106,11 +106,20 @@ pio run -e cardputer -t upload # flash over USB-C
 ### 3. First run
 
 The device asks for four things on its own keyboard — Wi-Fi name, Wi-Fi
-password, gateway host or IP, and the token. They go into NVS. **Nothing
-secret is ever compiled in**, so the build is safe to share and changing
-networks needs no toolchain.
+password, gateway address, and the token. They go into NVS. **Nothing secret
+is ever compiled in**, so the build is safe to share and changing networks
+needs no toolchain.
 
-To start over: hold `` ` `` while powering on, or run `store::erase()`.
+**Leave the gateway address blank** and the device finds the Pi over mDNS: the
+gateway announces `_m5gw._tcp` through avahi, and the discovered address is
+remembered so later boots skip the lookup. If the Pi later moves, a transport
+failure triggers one re-discovery before anything is reported as broken. The
+Wi-Fi password may be blank too, for an open network.
+
+To start over: **hold any key while powering on** for two seconds — the screen
+says `Taste halten fuer Reset...` and confirms when the credentials are gone.
+Two seconds, so a key brushed while plugging in the cable does not wipe the
+configuration.
 
 ## Keys
 
@@ -215,6 +224,7 @@ docs/                architecture, API contract, gateway operations, measuring
 | Mute does nothing on the Teufel | Known and unexplained: byte `0x28` reaches the box and has no effect, while power and volume work. Not a firmware fault. |
 | Everything stale, gateway healthy | Check the token: a wrong one gives 401 and the device keeps the old snapshot rather than blanking. |
 | Setup screen on every boot | NVS did not persist — check that the partition table matches the 8 MB flash. |
+| Never finds the gateway | mDNS may be filtered on the network. Type the Pi's IP during setup instead; the field exists for exactly this. |
 
 ## Status
 

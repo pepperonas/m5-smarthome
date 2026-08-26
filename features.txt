@@ -19,6 +19,7 @@ Multi-device macros (goodnight, alloff, wake) in one request
 Shared-secret auth via Bearer header, X-Token header or query parameter
 Fails closed: refuses to start, and refuses every request, without a token
 Ships as a systemd unit with a sandboxed non-root service
+Announces itself on the LAN as _m5gw._tcp so a fresh device needs no IP address
 
 ## Firmware (M5Cardputer / ADV)
 Home screen with live tiles for lights, strip, receiver, amp, disco, fog, climate
@@ -43,6 +44,9 @@ Draws the last snapshot from RTC memory before the radio is even up
 Queues key presses during reconnect instead of swallowing them
 Backlight dims, then blanks, then the device sleeps
 Wi-Fi credentials and gateway token typed on the device into NVS, never compiled in
+Finds the gateway over mDNS when no address was typed, and remembers it
+Re-discovers the gateway once after a transport failure, in case the Pi moved
+Wipes stored credentials when a key is held for two seconds at power-on
 Exponential reconnect backoff, capped, with the UI staying usable throughout
 
 ## Tooling

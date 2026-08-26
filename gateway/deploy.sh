@@ -23,6 +23,10 @@ ssh "$HOST" "test -f $DEST/.env || { \
    printf 'M5GW_TOKEN=%s\n' \"\$(openssl rand -hex 24)\" > $DEST/.env; \
    chmod 600 $DEST/.env; echo '    generated a new token'; }"
 
+echo "==> mDNS announcement"
+scp -q "$HERE/m5-gateway.avahi.service" "$HOST:/tmp/m5-gateway.avahi.service"
+ssh "$HOST" "sudo mv /tmp/m5-gateway.avahi.service /etc/avahi/services/m5-gateway.service"
+
 echo "==> service"
 scp -q "$HERE/m5-gateway.service" "$HOST:/tmp/m5-gateway.service"
 ssh "$HOST" "sudo mv /tmp/m5-gateway.service /etc/systemd/system/ && \

@@ -1,5 +1,6 @@
 #include "hw_net.h"
 
+#include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
@@ -36,6 +37,7 @@ QueueHandle_t g_jobs = nullptr;
 QueueHandle_t g_replies = nullptr;
 TaskHandle_t g_task = nullptr;
 volatile bool g_busy = false;
+bool g_rediscovered = false;
 Status g_status;
 Reply g_lastReply;
 
@@ -98,6 +100,29 @@ bool connectWifi() {
     return true;
 }
 
+// Ask the LAN where the gateway is. The Pi announces _m5gw._tcp through
+// avahi (see gateway/m5-gateway.avahi.service), so a fresh device needs a
+// token and a Wi-Fi password, not an IP address somebody has to look up.
+//
+// Only tried when we have no host, or when the one we have stopped
+// answering — a working address is never second-guessed.
+bool discoverGateway() {
+    if (!MDNS.begin("cardputer")) return false;
+    const int n = MDNS.queryService("m5gw", "tcp");
+    if (n <= 0) return false;
+    const IPAddress ip = MDNS.IP(0);
+    snprintf(g_cfg.host, sizeof(g_cfg.host), "%u.%u.%u.%u", ip[0], ip[1],
+             ip[2], ip[3]);
+    g_cfg.port = MDNS.port(0);
+    store::Config saved;
+    if (store::load(saved)) {
+        strncpy(saved.host, g_cfg.host, sizeof(saved.host) - 1);
+        saved.port = g_cfg.port;
+        store::save(saved);          // remember it, so next boot skips this
+    }
+    return true;
+}
+
 void buildUrl(char* out, size_t cap, const char* path) {
     snprintf(out, cap, "http://%s:%u%s", g_cfg.host, (unsigned)g_cfg.port, path);
 }
@@ -112,6 +137,10 @@ void runJob(const Job& job) {
     r.body[0] = 0;
 
     if (WiFi.status() != WL_CONNECTED && !connectWifi()) {
+        xQueueOverwrite(g_replies, &r);
+        return;
+    }
+    if (g_cfg.host[0] == 0 && !discoverGateway()) {
         xQueueOverwrite(g_replies, &r);
         return;
     }
@@ -149,6 +178,19 @@ void runJob(const Job& job) {
         r.ok = (code >= 200 && code < 300);
     }
     http.end();
+
+    // A transport failure (not an HTTP error) can mean the gateway moved.
+    // Re-discover once and retry, rather than staying broken until someone
+    // re-runs setup.
+    if (code <= 0 && !g_rediscovered) {
+        g_rediscovered = true;
+        if (discoverGateway()) {
+            xQueueSend(g_jobs, &job, 0);      // one retry at the new address
+            return;
+        }
+    }
+    if (code > 0) g_rediscovered = false;
+
     xQueueOverwrite(g_replies, &r);
 }
 

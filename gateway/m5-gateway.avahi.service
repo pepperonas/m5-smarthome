@@ -1,0 +1,18 @@
+<?xml version="1.0" standalone='no'?><!--*-nxml-*-->
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!--
+  Announces the gateway on the LAN so the remote can find it without being
+  told an IP address. Install to /etc/avahi/services/m5-gateway.service
+  (deploy.sh does this); avahi picks it up without a restart.
+
+  The device queries _m5gw._tcp and falls back to whatever host was typed
+  during setup, so this is a convenience, not a dependency.
+-->
+<service-group>
+  <name replace-wildcards="yes">M5 Smart-Home Gateway on %h</name>
+  <service>
+    <type>_m5gw._tcp</type>
+    <port>5010</port>
+    <txt-record>path=/api/dash</txt-record>
+  </service>
+</service-group>

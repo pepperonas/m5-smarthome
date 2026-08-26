@@ -248,7 +248,7 @@ void goToSleep() {
 // stays clean and a network change needs no toolchain.
 void runSetup() {
     const char* prompts[] = {"WLAN-Name", "WLAN-Passwort",
-                             "Gateway (Host/IP)", "Token"};
+                             "Gateway (leer = suchen)", "Token"};
     const bool masked[] = {false, true, false, true};
     char values[4][64] = {{0}, {0}, {0}, {0}};
     int step = 0, len = 0;
@@ -261,7 +261,10 @@ void runSetup() {
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
             const auto st = M5Cardputer.Keyboard.keysState();
             if (st.enter) {
-                if (len > 0 || step == 1) {     // an open network may have no key
+                // Blank is allowed for the password (open network) and for
+                // the host (mDNS finds it). Name and token are required.
+                const bool optional = (step == 1) || (step == 2);
+                if (len > 0 || optional) {
                     ++step;
                     len = 0;
                 }
@@ -303,6 +306,30 @@ void setup() {
 
     const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     const bool fromSleep = cause == ESP_SLEEP_WAKEUP_EXT0;
+
+    // Reset gesture, promised in the README: hold a key through power-on and
+    // the stored credentials are dropped. Checked before load() so a wrong
+    // token cannot lock you out of a device with no other input path.
+    M5Cardputer.update();
+    if (!fromSleep && M5Cardputer.Keyboard.isPressed()) {
+        M5Cardputer.Display.fillScreen(TFT_BLACK);
+        M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+        M5Cardputer.Display.drawString("Taste halten fuer Reset...", 6, 40);
+        // Long enough that a key pressed while plugging in does not wipe the
+        // configuration by accident.
+        uint32_t held = 0;
+        while (held < 2000) {
+            delay(50);
+            M5Cardputer.update();
+            if (!M5Cardputer.Keyboard.isPressed()) break;
+            held += 50;
+        }
+        if (held >= 2000) {
+            store::erase();
+            M5Cardputer.Display.drawString("Zugangsdaten geloescht.  ", 6, 60);
+            delay(1200);
+        }
+    }
 
     if (!store::load(g_cfg)) {
         g_setupMode = true;

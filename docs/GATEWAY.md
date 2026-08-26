@@ -29,8 +29,25 @@ The script is idempotent and does, in order:
 4. **generates a token on first run only** —
    `openssl rand -hex 24` into `.env`, mode 600 — and leaves an existing one
    alone;
-5. installs and enables `m5-gateway.service`;
-6. curls `/api/health`.
+5. installs an avahi service file so the gateway announces itself as
+   `_m5gw._tcp` — a fresh device then needs a token and a Wi-Fi password, not
+   an IP address;
+6. installs and enables `m5-gateway.service`;
+7. curls `/api/health`.
+
+Check the announcement (note that `avahi-browse` is *not* installed on this
+Pi — asking it there silently returns nothing, which is easy to misread as a
+failure). From a Mac:
+
+```bash
+dns-sd -B _m5gw._tcp
+```
+
+or from any Linux box with avahi-utils:
+
+```bash
+avahi-browse -rt _m5gw._tcp
+```
 
 ## Configuration
 
