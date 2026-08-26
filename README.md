@@ -8,19 +8,19 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 193 passing](https://img.shields.io/badge/tests-193%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![tests: 194 passing](https://img.shields.io/badge/tests-194%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
 ![firmware tests: 69](https://img.shields.io/badge/firmware%20tests-69-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
-![tool tests: 53](https://img.shields.io/badge/tool%20tests-53-brightgreen?style=flat-square)
+![tool tests: 54](https://img.shields.io/badge/tool%20tests-54-brightgreen?style=flat-square)
 ![mutation probes: 16 caught](https://img.shields.io/badge/mutation%20probes-16%20caught-8A2BE2?style=flat-square)
-![lines of code: 7 235](https://img.shields.io/badge/lines%20of%20code-7%20235-blue?style=flat-square)
+![lines of code: 7 314](https://img.shields.io/badge/lines%20of%20code-7%20314-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
 ![C++: 4 135 lines](https://img.shields.io/badge/C%2B%2B-4%20135%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 061 lines](https://img.shields.io/badge/Python-3%20061%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![Python: 3 099 lines](https://img.shields.io/badge/Python-3%20099%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)

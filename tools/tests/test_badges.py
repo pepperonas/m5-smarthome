@@ -8,6 +8,7 @@ treatment the generated IR table gets, and for the same reason.
 import importlib.util
 import pathlib
 import re
+import subprocess
 import sys
 
 import pytest
@@ -81,21 +82,47 @@ def test_line_counting_excludes_build_output():
     assert code < 20000, "build or dependency output is being counted"
 
 
-def test_only_tracked_files_are_counted():
-    """The count must not depend on what is lying around locally.
-
-    A gitignored secrets_local.h added 8 lines on the author's machine and
+def test_gitignored_files_are_not_counted():
+    """A gitignored secrets_local.h added 8 lines on the author's machine and
     none on a CI runner, so the badge disagreed with itself and the drift
     check failed for anyone with a personal build.
+
+    Note this is about *ignored*, not merely unstaged: a source file written
+    and not yet added still belongs to the commit and does count — see
+    test_staging_a_file_does_not_change_the_count.
     """
-    probe = ROOT / "firmware" / "untracked_line_probe.h"
+    probe = ROOT / "firmware" / "secrets_ignored_probe.h"   # matches secrets*.h
+    assert badges.subprocess.run(
+        ["git", "check-ignore", "-q", str(probe)], cwd=ROOT).returncode == 0, \
+        "the probe path is not actually ignored; the test proves nothing"
     before, _ = badges.count_lines()
     probe.write_text("\n" * 50)
     try:
         after, _ = badges.count_lines()
     finally:
         probe.unlink()
-    assert after == before, "an untracked file changed the line count"
+    assert after == before, "an ignored file changed the line count"
+
+
+def test_staging_a_file_does_not_change_the_count():
+    """The count must describe the commit, not the index.
+
+    A newly written file was invisible before `git add` and counted after, so
+    badges generated during development disagreed with the same commit checked
+    out in CI. Twice.
+    """
+    probe = ROOT / "firmware" / "staging_probe.h"
+    probe.write_text("// probe\n" * 10)
+    try:
+        unstaged, _ = badges.count_lines()
+        subprocess.run(["git", "add", str(probe)], cwd=ROOT, check=True,
+                       capture_output=True)
+        staged, _ = badges.count_lines()
+    finally:
+        subprocess.run(["git", "rm", "-f", "--quiet", "--ignore-unmatch",
+                        str(probe)], cwd=ROOT, capture_output=True)
+        probe.unlink(missing_ok=True)
+    assert unstaged == staged, "the line count depends on the index"
 
 
 def test_documentation_is_not_counted_as_code():
@@ -140,10 +167,15 @@ def test_the_block_does_not_depend_on_build_output():
     # searched for "RAM" and matched the "PSRAM required" badge.
     assert "build" not in badges.facts(), "a build-derived value is back"
 
+    import tempfile
     stash = ROOT / "firmware" / ".pio"
-    moved = stash.with_name(".pio-hidden-for-test")
     if not stash.exists():
         pytest.skip("no build output to hide")
+    # Must leave the tree entirely: renaming it inside the repo would make it
+    # stop matching the .pio/ ignore rule, so its thousands of vendored files
+    # would suddenly be counted — which is a different failure wearing the
+    # same red.
+    moved = pathlib.Path(tempfile.mkdtemp()) / "pio"
     with_build = badges.build_block(badges.facts())
     stash.rename(moved)
     try:

@@ -52,8 +52,14 @@ def iter_files():
     the drift check failed for anyone with a personal build. "Lines of code"
     means what is in the repository.
     """
-    out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT,
-                         capture_output=True, text=True)
+    # --cached plus --others --exclude-standard: everything that is in the
+    # repository *or about to be*, minus anything gitignored. Using --cached
+    # alone made the count depend on whether `git add` had run yet — a file
+    # written and not yet staged was invisible here and counted in CI, so the
+    # badge drifted between the commit and its own checkout.
+    out = subprocess.run(
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT, capture_output=True, text=True)
     if out.returncode != 0:
         raise SystemExit("not a git checkout; cannot count tracked files")
     for name in out.stdout.split("\0"):
