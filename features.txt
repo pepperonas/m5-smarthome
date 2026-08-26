@@ -51,7 +51,9 @@ Exponential reconnect backoff, capped, with the UI staying usable throughout
 Over-the-air updates as an explicit mode, entered with one key, showing progress
 
 ## Release and CI
-Writes a single flashable image (bootloader+partitions+OTA slot+app) on every build
+Writes both flashable artefacts on every build: launcher app and full USB image
+Fails the build if the app outgrows the launcher slot or is not a valid app image
+CI asserts on the image bytes that the launcher binary really is an application
 Attaches binaries and SHA256SUMS to every tagged release, built by CI not a laptop
 Leaves a downloadable build on every commit to main, between releases
 CI runs both suites, both mutation harnesses, and checks the IR table for drift

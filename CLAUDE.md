@@ -94,6 +94,17 @@ RTC memory carries a timestamp in the future. `ageMs()` treats that as
 maximally old on purpose; guessing "fresh" would show week-old values as
 current.
 
+**A launcher and esptool need *different* files.** M5Launcher/Bruce install
+the **application alone** (`m5-smarthome.bin`) into an app partition; esptool
+takes the **full image** (`m5-smarthome-esptool-full.bin`) at 0x0. Handing the
+full image to a launcher writes a bootloader where an application belongs and
+the device comes up with nothing to run — which is exactly what happened on
+the first attempt here, because the docs pushed the full image as "the" file.
+Tell them apart by the bytes, not the name: a valid app image has magic 0xE9
+at 0 **and** the app descriptor 0xABCD5432 at offset 0x20. The launcher slot on
+this hardware is 1536 KB; the build fails past it rather than shipping
+something that can no longer be installed the usual way.
+
 ## House rules this code enforces
 
 These come from bugs the house has already paid for. Do not relax them.

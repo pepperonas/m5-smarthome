@@ -99,31 +99,47 @@ in [`docs/GATEWAY.md`](docs/GATEWAY.md).
 
 **Prebuilt binaries** are attached to every
 [release](https://github.com/pepperonas/m5-smarthome/releases), built by CI
-from the tagged commit. `m5-smarthome-full.bin` is the complete image —
-bootloader, partition table, OTA selector and application at their correct
-offsets:
+from the tagged commit.
+
+**From an SD card, like any other Cardputer firmware — the normal way:**
+
+Copy **`m5-smarthome.bin`** to the SD card and install it from M5Launcher or
+Bruce. That file is the application on its own, which is what a launcher
+writes into an app partition, and what OTA takes. It uses 70 % of the 1536 KB
+slot a launcher offers.
+
+**Over USB, replacing everything on the device:**
 
 ```bash
 esptool.py --chip esp32s3 --port /dev/cu.usbmodem* \
-  write_flash 0x0 m5-smarthome-full.bin
+  write_flash 0x0 m5-smarthome-esptool-full.bin
 ```
 
-It also works with M5Burner and web flashers that take a single image at
-offset 0. Check a download against the release's `SHA256SUMS`. Between
-releases, every commit on `main` leaves a downloadable build under the
+`m5-smarthome-esptool-full.bin` additionally contains the bootloader,
+partition table and OTA selector at their correct offsets, so it also works
+with M5Burner and web flashers that take a single image at offset 0.
+
+> ⚠️ **Do not hand the full image to a launcher.** The launcher writes the
+> file into an app partition, and a bootloader is not a valid application
+> there — the device comes up with nothing to run. The launcher wants
+> `m5-smarthome.bin`.
+
+Check a download against the release's `SHA256SUMS`. Between releases, every
+commit on `main` leaves a downloadable build under the
 [Actions](https://github.com/pepperonas/m5-smarthome/actions) tab.
 
 Or build it yourself:
 
 ```bash
 cd firmware
-pio test -e native             # host tests, no hardware needed
+pio test -e native              # host tests, no hardware needed
 pio run  -e cardputer -t upload # compile and flash over USB-C
 ```
 
-Every build also writes `m5-smarthome-full.bin` (and its `.sha256`) next to
-`firmware.bin` in `.pio/build/cardputer/`, so the merged image is never a
-separate step somebody forgets.
+Every build writes both files (and their `.sha256`) into
+`.pio/build/cardputer/`, and **fails** if the application outgrows the
+launcher slot or stops being a valid app image — so an artefact that cannot be
+installed the usual way never ships quietly.
 
 ### 3. First run
 
@@ -260,6 +276,7 @@ docs/                architecture, API contract, gateway operations, measuring
 | `abgelehnt` after pressing Enter on fog | The gateway's interlock. Confirm on the device first. |
 | Mute does nothing on the Teufel | Known and unexplained: byte `0x28` reaches the box and has no effect, while power and volume work. Not a firmware fault. |
 | Everything stale, gateway healthy | Check the token: a wrong one gives 401 and the device keeps the old snapshot rather than blanking. |
+| Launcher installs it, device shows nothing / boot-loops | The full image was given to the launcher. Use `m5-smarthome.bin`, then reflash via USB once to recover. |
 | Setup screen on every boot | NVS did not persist — check that the partition table matches the 8 MB flash. |
 | Never finds the gateway | mDNS may be filtered on the network. Type the Pi's IP during setup instead; the field exists for exactly this. |
 

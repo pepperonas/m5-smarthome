@@ -1,12 +1,28 @@
-"""Post-build step: produce one flashable image next to firmware.bin.
+"""Post-build step: produce the two artefacts people actually flash.
 
-Runs on every `pio run -e cardputer`, so the artefact people actually want is
-never a separate manual step that gets forgotten before a release.
+Runs on every `pio run -e cardputer`, so neither is a manual step that gets
+forgotten before a release.
 
-The ESP32-S3 needs four pieces at four offsets. Getting one of them wrong
-gives a device that boots into a loop with no useful message, so they are
-merged here once, correctly, instead of being written out in a README for
-everybody to retype.
+There are two, because there are two ways to flash a Cardputer and they need
+*different* files:
+
+  m5-smarthome.bin              the application alone. This is what an SD-card
+                                launcher (M5Launcher, Bruce) installs, and what
+                                OTA takes. It carries an app descriptor at
+                                offset 0x20 and is written into an app
+                                partition.
+
+  m5-smarthome-esptool-full.bin bootloader + partition table + OTA selector +
+                                application, at their correct offsets, written
+                                from 0x0 with esptool or M5Burner. It replaces
+                                everything on the device.
+
+Handing the full image to a launcher is the mistake this file exists to make
+hard: the launcher writes it into an app partition, where a bootloader is not
+a valid application, and the device comes up with nothing to run.
+
+A launcher partition on this hardware is 1536 KB, so the build fails rather
+than quietly producing an application that can no longer be installed that way.
 """
 
 import glob
@@ -20,6 +36,14 @@ BOOTLOADER_OFFSET = "0x0"
 PARTITIONS_OFFSET = "0x8000"
 BOOT_APP0_OFFSET = "0xe000"
 APP_OFFSET = "0x10000"
+
+# What an SD-card launcher offers as an app slot on this hardware. Exceeding
+# it does not break the esptool path, but it silently removes the way most
+# people install firmware on a Cardputer.
+LAUNCHER_SLOT_BYTES = 1536 * 1024
+
+# esp_app_desc_t magic, found at offset 0x20 of a valid application image.
+APP_DESC_MAGIC = 0xABCD5432
 
 
 def find_boot_app0():
@@ -40,6 +64,28 @@ def find_boot_app0():
     return hits[0] if hits else None
 
 
+def sha256_file(path):
+    return hashlib.sha256(open(path, "rb").read()).hexdigest()
+
+
+def write_digest(path):
+    digest = sha256_file(path)
+    with open(path + ".sha256", "w") as fh:
+        fh.write("%s  %s\n" % (digest, os.path.basename(path)))
+    return digest
+
+
+def check_is_app_image(path):
+    """A launcher writes this into an app partition; a bootloader there bricks
+    the boot. Cheap to verify, so verify it rather than trust the filename."""
+    with open(path, "rb") as fh:
+        head = fh.read(0x24)
+    if len(head) < 0x24 or head[0] != 0xE9:
+        return False
+    magic = int.from_bytes(head[0x20:0x24], "little")
+    return magic == APP_DESC_MAGIC
+
+
 def merge(source, target, env):                  # noqa: A002 — PlatformIO signature
     build_dir = env.subst("$BUILD_DIR")
     app = os.path.join(build_dir, "firmware.bin")
@@ -52,7 +98,30 @@ def merge(source, target, env):                  # noqa: A002 — PlatformIO sig
         print("merge_bin: skipped, missing %s" % (missing or ["boot_app0.bin"]))
         return
 
-    out = os.path.join(build_dir, "m5-smarthome-full.bin")
+    # --- the application, for launchers and OTA --------------------------
+    app_size = os.path.getsize(app)
+    if not check_is_app_image(app):
+        raise SystemExit(
+            "merge_bin: firmware.bin is not a valid application image "
+            "(no app descriptor at 0x20). Refusing to publish it as one.")
+    if app_size > LAUNCHER_SLOT_BYTES:
+        raise SystemExit(
+            "merge_bin: the application is %d bytes, over the %d-byte app slot "
+            "an SD-card launcher offers. It would still flash over USB, but "
+            "installing it the way most Cardputer firmware is installed would "
+            "stop working. Shrink it, or raise LAUNCHER_SLOT_BYTES knowingly."
+            % (app_size, LAUNCHER_SLOT_BYTES))
+
+    launcher_bin = os.path.join(build_dir, "m5-smarthome.bin")
+    with open(app, "rb") as src, open(launcher_bin, "wb") as dst:
+        dst.write(src.read())
+    write_digest(launcher_bin)
+    print("merge_bin: %s (%d bytes, %d%% of the %d KB launcher slot)"
+          % (launcher_bin, app_size, 100 * app_size // LAUNCHER_SLOT_BYTES,
+             LAUNCHER_SLOT_BYTES // 1024))
+
+    # --- the whole image, for esptool and M5Burner ------------------------
+    out = os.path.join(build_dir, "m5-smarthome-esptool-full.bin")
     env.Execute(" ".join([
         '"$PYTHONEXE"', '"$OBJCOPY"', "--chip", "esp32s3", "merge_bin",
         "-o", '"%s"' % out,
@@ -66,11 +135,8 @@ def merge(source, target, env):                  # noqa: A002 — PlatformIO sig
     ]))
 
     if os.path.isfile(out):
-        digest = hashlib.sha256(open(out, "rb").read()).hexdigest()
-        with open(out + ".sha256", "w") as fh:
-            fh.write("%s  %s\n" % (digest, os.path.basename(out)))
+        write_digest(out)
         print("merge_bin: %s (%d bytes)" % (out, os.path.getsize(out)))
-        print("merge_bin: sha256 %s" % digest)
 
 
 env.AddPostAction("$BUILD_DIR/${PROGNAME}.bin", merge)   # noqa: F821

@@ -72,13 +72,32 @@ jobs:
       - name: Collect binaries
         run: |
           mkdir -p dist
-          cp firmware/.pio/build/cardputer/m5-smarthome-full.bin dist/
-          cp firmware/.pio/build/cardputer/m5-smarthome-full.bin.sha256 dist/
-          cp firmware/.pio/build/cardputer/firmware.bin dist/m5-smarthome-app.bin
-          cp firmware/.pio/build/cardputer/bootloader.bin dist/
-          cp firmware/.pio/build/cardputer/partitions.bin dist/
+          B=firmware/.pio/build/cardputer
+          cp $B/m5-smarthome.bin dist/
+          cp $B/m5-smarthome-esptool-full.bin dist/
+          cp $B/bootloader.bin dist/
+          cp $B/partitions.bin dist/
           cp tools/sleep-probe/.pio/build/probe/firmware.bin dist/sleep-probe.bin
           ( cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS )
+
+      # The launcher path is how most people install firmware on a Cardputer,
+      # and handing it the wrong file produces a device with nothing to run.
+      # Assert on the bytes rather than trusting the filename.
+      - name: The launcher binary is a real application image
+        run: |
+          python - <<'PY'
+          import sys
+          for name, want_app in (("dist/m5-smarthome.bin", True),
+                                 ("dist/sleep-probe.bin", True),
+                                 ("dist/m5-smarthome-esptool-full.bin", False)):
+              head = open(name, "rb").read(0x24)
+              magic = int.from_bytes(head[0x20:0x24], "little")
+              is_app = head[0] == 0xE9 and magic == 0xABCD5432
+              print(f"{name}: app image = {is_app}")
+              if is_app != want_app:
+                  sys.exit(f"{name} is {'not ' if want_app else ''}an app image "
+                           f"but was published as one")
+          PY
 
       # Every commit on main leaves a downloadable build, so there is always
       # something current to flash even between releases.
@@ -96,20 +115,27 @@ jobs:
           files: dist/*
           generate_release_notes: true
           body: |
-            ## Flashing
+            ## Which file do I want?
 
-            `m5-smarthome-full.bin` is the whole image — bootloader, partition
-            table, OTA selector and application at their correct offsets:
+            **`m5-smarthome.bin`** — the normal one. Copy it to the SD card and
+            install it from M5Launcher / Bruce, exactly like any other
+            Cardputer firmware. This is also the file OTA takes.
+
+            **`m5-smarthome-esptool-full.bin`** — only for flashing over USB
+            with esptool or M5Burner. It contains the bootloader and partition
+            table as well and replaces everything on the device:
 
             ```bash
             esptool.py --chip esp32s3 --port /dev/ttyUSB0 \
-              write_flash 0x0 m5-smarthome-full.bin
+              write_flash 0x0 m5-smarthome-esptool-full.bin
             ```
 
-            It also works with M5Burner and web flashers that take a single
-            image at offset 0.
+            Do **not** hand the full image to a launcher: it writes the file
+            into an app partition, where a bootloader is not a valid
+            application, and the device comes up with nothing to run.
 
-            `sleep-probe.bin` is the measurement sketch. Flash it **first**: it
+            `sleep-probe.bin` is the measurement sketch, also a normal app
+            image, so the launcher takes it too. Flash it **first**: it
             answers whether the keyboard controller really wakes the ESP32
             from deep sleep, which is what the whole power design rests on.
             See `docs/MEASURE.md`.
