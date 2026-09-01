@@ -6,18 +6,70 @@ reports whether the suite caught it, and restores the file in a `finally` —
 an earlier ad-hoc version of this crashed mid-run and left three mutated files
 in the tree, which is exactly the failure mode this script exists to avoid.
 
-Usage:  python3 tools/mutate.py firmware   |   python3 tools/mutate.py gateway
+A `finally` does not survive SIGKILL, and that door was walked through too: a
+killed run left the "rollback is a no-op" mutation in optimistic.cpp, and the
+next suite run blamed a guarantee no commit had broken. So the original text
+is journalled to disk *before* the source file is touched, and every start
+recovers whatever a dead run left behind.
+
+Usage:  python3 tools/mutate.py firmware | gateway | shell
 """
 
+import json
 import pathlib
 import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+#: Records the original text of the file currently being mutated. Written
+#: before the source file is touched and removed after it is restored, so its
+#: mere existence means a run died mid-mutation.
+JOURNAL = ROOT / ".mutate-journal.json"
+
+
+def begin_mutation(path, original):
+    """Journal the original text, then let the caller mutate the file."""
+    JOURNAL.write_text(json.dumps({str(path): original}))
+
+
+def end_mutation(path):
+    """Restore from the journal and drop it. Safe to call twice."""
+    recover(quiet=True)
+
+
+def recover(quiet=False):
+    """Undo whatever a previous run left mutated. Returns the paths restored."""
+    if not JOURNAL.exists():
+        return []
+    try:
+        entries = json.loads(JOURNAL.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        # Deleting it would destroy the only record of the original text.
+        raise SystemExit(
+            f"the mutation journal at {JOURNAL} is corrupt ({e}); a file may "
+            f"still be mutated. Inspect it, restore by hand (git checkout), "
+            f"then delete it.")
+    restored = []
+    for name, original in entries.items():
+        path = pathlib.Path(name)
+        if path.read_text() != original:
+            if not quiet:
+                print(f"  recovered {path.name} from an interrupted run")
+        path.write_text(original)
+        restored.append(path)
+    JOURNAL.unlink()
+    return restored
+
+
 SUITES = {
     "firmware": (ROOT / "firmware", ["pio", "test", "-e", "native"]),
     "gateway": (ROOT / "gateway", ["python3", "-m", "pytest", "tests/", "-q"]),
+    # The Arduino shell has no host tests; its invariants are pinned against
+    # the source (tools/tests/test_firmware_shell.py). Those pins deserve the
+    # same distrust as any other test.
+    "shell": (ROOT, ["python3", "-m", "pytest",
+                     "tools/tests/test_firmware_shell.py", "-q"]),
 }
 
 MUTATIONS = {
@@ -56,6 +108,28 @@ MUTATIONS = {
          "    return (idx >= 0 && idx < kHomeRowCount) ? kHomeRows[idx] : Screen::Home;",
          "    return (idx >= 0 && idx < kHomeRowCount) ? kHomeRows[(idx + 1) % kHomeRowCount] : Screen::Home;"),
     ],
+    "shell": [
+        ("changed baked credentials never reach a seeded device",
+         "firmware/src/main.cpp",
+         "if (baked.ssid[0] && baked.token[0] &&\n"
+         "            store::seedFingerprint() != fp) {",
+         "if (false) {"),
+        ("a failed gateway discovery is silent again",
+         "firmware/src/hw_net.cpp",
+         '"Gateway nicht gefunden (mDNS)"',
+         '""'),
+        ("a network dead end no longer counts as a failure",
+         "firmware/src/hw_net.cpp",
+         "    if (g_cfg.host[0] == 0 && !discoverGateway()) {\n"
+         "        ++g_status.requests;\n"
+         "        ++g_status.failed;",
+         "    if (g_cfg.host[0] == 0 && !discoverGateway()) {\n"
+         "        ++g_status.requests;"),
+        ("the diagnostics screen hides the configured target",
+         "firmware/src/hw_ui.cpp",
+         '"GW %s:%u  Token %s"',
+         '"(noch kein Abruf)"'),
+    ],
     "gateway": [
         ("the fog interlock is removed", "m5gw/actions.py",
          'if p.get("confirm") is not True:', "if False:"),
@@ -90,6 +164,10 @@ def main():
         raise SystemExit(f"unknown suite {which!r}; pick one of {list(SUITES)}")
     cwd, cmd = SUITES[which]
 
+    # A previous run may have been killed outright, leaving a mutated file
+    # that would otherwise be blamed on the code under test.
+    recover()
+
     if not run(cwd, cmd):
         raise SystemExit("baseline suite is red — fix that before mutating")
 
@@ -101,11 +179,12 @@ def main():
             print(f"  SKIP  {label} (anchor text not found in {rel})")
             survived.append(label + " [anchor missing]")
             continue
+        begin_mutation(path, original)     # on disk before the file changes
         try:
             path.write_text(original.replace(old, new, 1))
             caught = not run(cwd, cmd)
         finally:
-            path.write_text(original)          # always, even on Ctrl-C
+            end_mutation(path)                 # always, even on Ctrl-C
         print(f"  {'caught' if caught else 'SURVIVED':>8}  {label}")
         if not caught:
             survived.append(label)

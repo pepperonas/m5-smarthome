@@ -60,10 +60,16 @@ Measured live on 2026-08-25/26. Re-check before trusting; services move.
 
 ## Pitfalls hit while building this
 
-**The mutation script must restore in a `finally`.** An early ad-hoc version
-crashed on an unrelated parse error before writing the original back and left
-three mutated files in the tree. `tools/mutate.py` now uses try/finally, and
-it exists precisely so this is not improvised again.
+**The mutation script must restore in a `finally` — and that is not enough.**
+An early ad-hoc version crashed before writing the original back and left
+three mutated files in the tree. Later a *killed* run walked through the same
+door, because a `finally` does not survive SIGKILL: the "rollback is a no-op"
+mutation sat in `optimistic.cpp` and the next suite run blamed a guarantee no
+commit had broken. `tools/mutate.py` now journals the original text to
+`.mutate-journal.json` **before** touching the file and recovers on every
+start; the ordering is pinned in `tools/tests/test_mutate.py`. ⚠️ The failure
+looked non-deterministic (a different test named each run) purely because
+`tail` hid the real one — read the whole log before calling something flaky.
 
 **`pgrep -f` and `pkill -f` match their own command line** — including the ssh
 command that carries the pattern. Checking for leftover test processes that

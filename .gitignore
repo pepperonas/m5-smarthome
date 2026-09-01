@@ -15,6 +15,9 @@ secrets.json
 id_ed25519*
 id_rsa*
 
+# --- Mutation harness: source text mid-edit, never a commit ---
+.mutate-journal.json
+
 # --- PlatformIO / build ---
 .pio/
 .pioenvs/

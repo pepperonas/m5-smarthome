@@ -142,3 +142,11 @@ and no device-side number in this documentation is a measurement.
 [`MEASURE.md`](MEASURE.md) is the procedure for filling those in, and
 `tools/sleep-probe/` answers the load-bearing question first — whether the
 keyboard controller really wakes the ESP32 from deep sleep.
+
+## The harness is tested too
+
+`tools/mutate.py` rewrites source files in place, which makes it the one tool
+whose own failure is invisible: a run killed mid-mutation leaves a broken
+tree that looks like ordinary uncommitted work. `tools/tests/test_mutate.py`
+pins the crash-recovery journal — in particular that it is written *before*
+the source file changes, since the reverse order recovers nothing.

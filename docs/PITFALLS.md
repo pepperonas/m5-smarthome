@@ -194,3 +194,21 @@ source, and get it onto hardware before believing it works.
 the suite to go red. It restores every file in a `finally` — an earlier ad-hoc
 version crashed mid-run and left three mutated files in the tree, which is
 exactly the failure it now guards against.
+
+### A `finally` does not survive SIGKILL
+
+The same door, opened again: a killed run left the "rollback is a no-op"
+mutation sitting in `optimistic.cpp`. The next suite run then reported a
+broken guarantee that no commit had broken, and the file looked like an
+ordinary uncommitted edit in `git status`.
+
+Cleanup you can be killed out of is not cleanup. The original text is now
+journalled to `.mutate-journal.json` **before** the source file is touched,
+and every run recovers what a dead one left behind. The ordering is the whole
+mechanism and is pinned by a test; a journal written after the mutation would
+leave exactly the same orphan.
+
+Diagnosis note, because it cost a wrong turn: the failure looked
+*non-deterministic* — a different test named in each run. It was not. `tail`
+on the output hid the real failure, which was the same one every time. Read
+the whole log before calling something flaky.
