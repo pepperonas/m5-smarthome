@@ -54,6 +54,21 @@ bool save(const Config& cfg) {
     return true;
 }
 
+uint32_t seedFingerprint() {
+    Preferences p;
+    if (!p.begin(kNamespace, /*readOnly=*/true)) return 0;
+    const uint32_t fp = p.getUInt("seedfp", 0);
+    p.end();
+    return fp;
+}
+
+void setSeedFingerprint(uint32_t fp) {
+    Preferences p;
+    if (!p.begin(kNamespace, /*readOnly=*/false)) return;
+    p.putUInt("seedfp", fp);
+    p.end();
+}
+
 void erase() {
     Preferences p;
     if (p.begin(kNamespace, false)) {

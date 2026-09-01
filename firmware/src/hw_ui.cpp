@@ -297,7 +297,7 @@ void drawDetail(const core::UiState& st, const core::Dash& d) {
 
 void drawDiagnostics(const core::Dash& d, uint32_t nowMs,
                      const net::Status& link) {
-    char buf[52];
+    char buf[64];
     text(6, kContentY, "Diagnose", kAccent);
 
     const char* linkName = link.link == net::LinkState::Online ? "online"
@@ -309,8 +309,22 @@ void drawDiagnostics(const core::Dash& d, uint32_t nowMs,
     text(6, kContentY + kRowH, buf,
          link.link == net::LinkState::Online ? kFg : kWarn);
 
-    text(6, kContentY + kRowH * 2, link.url[0] ? link.url : "(noch kein Abruf)",
-         kDim);
+    if (link.url[0]) {
+        text(6, kContentY + kRowH * 2, link.url, kDim);
+    } else {
+        // Before the first request, show where it WILL go. A stale or empty
+        // host in NVS produces no URL and no error; without this line the
+        // screen cannot distinguish "not yet" from "aimed at nothing".
+        if (link.cfgHost[0]) {
+            snprintf(buf, sizeof(buf), "GW %s:%u  Token %s", link.cfgHost,
+                     (unsigned)link.cfgPort, link.haveToken ? "ja" : "FEHLT");
+        } else {
+            snprintf(buf, sizeof(buf), "GW per mDNS suchen  Token %s",
+                     link.haveToken ? "ja" : "FEHLT");
+        }
+        text(6, kContentY + kRowH * 2, buf,
+             link.cfgHost[0] && link.haveToken ? kDim : kWarn);
+    }
 
     // The single most useful line: what the gateway actually answered.
     if (link.lastError[0]) {

@@ -34,6 +34,14 @@ struct Status {
     char lastError[40] = {0};
     uint32_t freeHeap = 0;
     uint32_t stackHighWater = 0; // words left on the worker stack
+
+    // The configured target, so the diagnostics screen can show where the
+    // next request WILL go. A stale or empty host in NVS is otherwise
+    // invisible: it produces no URL, no HTTP status and no error — just a
+    // device that never fetches anything.
+    char cfgHost[40] = {0};
+    uint16_t cfgPort = 0;
+    bool haveToken = false;
 };
 
 // Starts the worker task. Safe to call once from setup().

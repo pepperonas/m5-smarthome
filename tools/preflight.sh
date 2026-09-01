@@ -25,6 +25,9 @@ echo "==> firmware builds"
 echo "==> mutation probes"
 python3 tools/mutate.py gateway
 python3 tools/mutate.py firmware
+# The Arduino shell has no host tests; its invariants are pinned against the
+# source, and those pins deserve the same distrust as any other test.
+python3 tools/mutate.py shell
 
 echo "==> IR table matches its source"
 python3 tools/gen_ir_table.py

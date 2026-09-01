@@ -18,6 +18,8 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 MAIN = ROOT / "firmware" / "src" / "main.cpp"
+HWNET = ROOT / "firmware" / "src" / "hw_net.cpp"
+HWUI = ROOT / "firmware" / "src" / "hw_ui.cpp"
 
 
 def source_without_comments(path):
@@ -75,6 +77,62 @@ def test_mapping_lives_in_the_tested_core(main_src):
 def test_the_shell_uses_the_pure_mapper(main_src):
     assert "core::mapKey" in main_src
     assert "core::hasKeyEvent" in main_src
+
+
+@pytest.fixture
+def hwnet_src():
+    return source_without_comments(HWNET)
+
+
+@pytest.fixture
+def hwui_src():
+    return source_without_comments(HWUI)
+
+
+def test_the_baked_seed_is_not_gated_on_an_empty_nvs(main_src):
+    """The compiled-in credentials of a local build must apply once per
+    distinct value set. The original gate — seed only when store::load()
+    fails — kept a device on whatever the FIRST local build baked: load()
+    accepts a config with an empty host, so a stale host survived every
+    reflash and the device silently aimed at nothing."""
+    body = _function_body(main_src, "setup")
+    assert body is not None
+    fp = body.find("configFingerprint")
+    gate = body.find("if (!store::load(g_cfg))")
+    assert fp != -1, "the seed no longer fingerprints the baked values"
+    assert gate != -1, "the setup fallback gate is gone"
+    assert fp < gate, (
+        "the baked seed runs inside/after the load gate again — a stored "
+        "config then shadows changed compiled-in values forever")
+    assert "seedFingerprint() != fp" in body, (
+        "the seed must fire exactly when the baked values CHANGED; any other "
+        "comparison either re-seeds every boot or never re-seeds at all")
+
+
+def test_network_dead_ends_are_reported_not_silent(hwnet_src):
+    """runJob's early returns (Wi-Fi down, mDNS discovery failed) used to
+    return without a word: no error, no counter. The diagnostics screen then
+    showed "Abrufe 0" on a device that was polling constantly."""
+    for msg in ("WLAN-Verbindung fehlgeschlagen", "Gateway nicht gefunden"):
+        at = hwnet_src.find(msg)
+        assert at != -1, f"dead-end message {msg!r} is gone"
+        before = hwnet_src[max(0, at - 300):at]
+        after = hwnet_src[at:at + 300]
+        assert "++g_status.failed" in before, (
+            f"the dead end behind {msg!r} no longer counts as a failure")
+        assert "xQueueOverwrite" in after, (
+            f"the dead end behind {msg!r} no longer answers the UI task")
+
+
+def test_the_diagnostics_screen_names_the_configured_gateway(hwui_src):
+    """Before the first request there is no URL, no status and no error. The
+    only way to see a stale or empty host from the screen is to print the
+    configured target itself."""
+    body = _function_body(hwui_src, "drawDiagnostics")
+    assert body is not None
+    assert '"GW %s:%u  Token %s"' in body, (
+        "diagnostics no longer draws the configured host and port")
+    assert "FEHLT" in body, "diagnostics no longer flags a missing token"
 
 
 def _function_body(src, name):

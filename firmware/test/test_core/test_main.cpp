@@ -401,6 +401,41 @@ void test_sleep_never_interrupts_an_in_flight_request(void) {
     TEST_ASSERT_FALSE(shouldSleep(kSleepAfterMs * 10, /*busy=*/true));
 }
 
+// A local build's compiled-in credentials are seeded into NVS once per
+// *distinct value set*; the fingerprint decides "distinct". If it missed a
+// field, changing that field in secrets_local.h would silently never reach a
+// device that was seeded before — the exact shape of the bug this replaces,
+// where the seed ran only into an empty NVS and a stale host survived every
+// reflash.
+void test_the_same_config_gives_the_same_fingerprint(void) {
+    const uint32_t a = configFingerprint("net", "pw", "10.0.0.2", 5010, "tok");
+    const uint32_t b = configFingerprint("net", "pw", "10.0.0.2", 5010, "tok");
+    TEST_ASSERT_EQUAL_UINT32(a, b);
+}
+
+void test_every_field_participates_in_the_fingerprint(void) {
+    const uint32_t base =
+        configFingerprint("net", "pw", "10.0.0.2", 5010, "tok");
+    TEST_ASSERT_NOT_EQUAL(base,
+        configFingerprint("neu", "pw", "10.0.0.2", 5010, "tok"));
+    TEST_ASSERT_NOT_EQUAL(base,
+        configFingerprint("net", "pq", "10.0.0.2", 5010, "tok"));
+    TEST_ASSERT_NOT_EQUAL(base,
+        configFingerprint("net", "pw", "10.0.0.3", 5010, "tok"));
+    TEST_ASSERT_NOT_EQUAL(base,
+        configFingerprint("net", "pw", "10.0.0.2", 5011, "tok"));
+    TEST_ASSERT_NOT_EQUAL(base,
+        configFingerprint("net", "pw", "10.0.0.2", 5010, "toc"));
+}
+
+void test_field_boundaries_are_not_ambiguous(void) {
+    // "ab"+"c" and "a"+"bc" concatenate identically; the separator in the
+    // hash must keep them apart, or two different configs could share a
+    // fingerprint and one of them would never be seeded.
+    TEST_ASSERT_NOT_EQUAL(configFingerprint("ab", "c", "", 1, ""),
+                          configFingerprint("a", "bc", "", 1, ""));
+}
+
 void test_backoff_doubles_and_is_capped(void) {
     TEST_ASSERT_EQUAL(0u, backoffDelay(0));
     TEST_ASSERT_EQUAL(kBackoffStartMs, backoffDelay(1));
@@ -533,6 +568,9 @@ int main(int, char**) {
     RUN_TEST(test_backoff_doubles_and_is_capped);
     RUN_TEST(test_a_stale_access_point_hint_is_not_used);
     RUN_TEST(test_an_empty_access_point_hint_is_rejected);
+    RUN_TEST(test_the_same_config_gives_the_same_fingerprint);
+    RUN_TEST(test_every_field_participates_in_the_fingerprint);
+    RUN_TEST(test_field_boundaries_are_not_ambiguous);
     RUN_TEST(test_enter_opens_the_selected_row_on_the_home_screen);
     RUN_TEST(test_arrows_and_digits_agree_about_every_home_row);
     RUN_TEST(test_every_screen_reachable_from_home_responds_to_enter);

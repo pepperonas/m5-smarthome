@@ -42,6 +42,17 @@ constexpr uint32_t kBackoffMaxMs = 30000;
 
 uint32_t backoffDelay(int consecutiveFailures);
 
+// --- baked-config seed -----------------------------------------------------
+
+// A local build's compiled-in credentials apply exactly once per distinct
+// value set. The fingerprint of what was last seeded lives in NVS; when the
+// compiled values change, the new set wins over whatever is stored — the
+// old seed-once-into-empty-NVS logic kept a device on whatever the FIRST
+// local build baked, forever.
+uint32_t configFingerprint(const char* ssid, const char* pass,
+                           const char* host, uint16_t port,
+                           const char* token);
+
 // --- fast wake ------------------------------------------------------------
 
 // A remembered BSSID/channel skips the scan, which is the single biggest win

@@ -42,4 +42,26 @@ bool apHintUsable(const ApHint& h, uint32_t nowEpoch) {
     return (nowEpoch - h.savedAtEpoch) < kApHintTtlS;
 }
 
+
+uint32_t configFingerprint(const char* ssid, const char* pass,
+                           const char* host, uint16_t port,
+                           const char* token) {
+    // FNV-1a. Each string is hashed *including* its terminating NUL, which
+    // acts as the field separator — without it "ab","c" and "a","bc" would
+    // collide and a changed config could go unseeded.
+    uint32_t h = 2166136261u;
+    const auto mix = [&h](const char* s) {
+        do {
+            h = (h ^ static_cast<uint8_t>(*s)) * 16777619u;
+        } while (*s++);
+    };
+    mix(ssid);
+    mix(pass);
+    mix(host);
+    h = (h ^ static_cast<uint8_t>(port & 0xFF)) * 16777619u;
+    h = (h ^ static_cast<uint8_t>(port >> 8)) * 16777619u;
+    mix(token);
+    return h;
+}
+
 }  // namespace core

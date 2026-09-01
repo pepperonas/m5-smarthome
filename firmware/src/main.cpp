@@ -352,27 +352,35 @@ void setup() {
         }
     }
 
-    if (!store::load(g_cfg)) {
 #if M5SH_LOCAL_SECRETS
-        // Seed NVS once from the compiled-in values, then behave exactly like
-        // a device that was set up by hand — including the reset gesture,
-        // which still wipes it. Writing to NVS rather than reading the macros
-        // everywhere keeps one code path for both kinds of build.
+    // The compiled-in credentials apply exactly once per *distinct value
+    // set*, not only into an empty NVS. The old gate — seed only when load()
+    // fails — kept a device on whatever the FIRST local build baked: load()
+    // accepts a config with an empty host, so a stale host or token survived
+    // every reflash and newer values in secrets_local.h never reached the
+    // device. The fingerprint records what was last seeded; a config typed on
+    // the device survives until the baked values themselves change, and the
+    // reset gesture still wipes everything (a local build then re-seeds on
+    // the next boot, which for a personal device is the useful behaviour).
+    {
         store::Config baked;
         strncpy(baked.ssid, M5SH_WIFI_SSID, sizeof(baked.ssid) - 1);
         strncpy(baked.pass, M5SH_WIFI_PASS, sizeof(baked.pass) - 1);
         strncpy(baked.token, M5SH_GW_TOKEN, sizeof(baked.token) - 1);
         strncpy(baked.host, M5SH_GW_HOST, sizeof(baked.host) - 1);
         baked.port = M5SH_GW_PORT;
-        if (baked.ssid[0] && baked.token[0]) {
+        const uint32_t fp = core::configFingerprint(
+            baked.ssid, baked.pass, baked.host, baked.port, baked.token);
+        if (baked.ssid[0] && baked.token[0] &&
+            store::seedFingerprint() != fp) {
             store::save(baked);
-            store::load(g_cfg);
+            store::setSeedFingerprint(fp);
         }
+    }
 #endif
-        if (!g_cfg.valid) {
-            g_setupMode = true;
-            runSetup();
-        }
+    if (!store::load(g_cfg)) {
+        g_setupMode = true;
+        runSetup();
     }
 
     // Draw *something* before the radio is even up. On a wake the last

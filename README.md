@@ -8,20 +8,20 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 236 passing](https://img.shields.io/badge/tests-236%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
-![firmware tests: 88](https://img.shields.io/badge/firmware%20tests-88-brightgreen?style=flat-square)
+![tests: 248 passing](https://img.shields.io/badge/tests-248%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 91](https://img.shields.io/badge/firmware%20tests-91-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
-![tool tests: 77](https://img.shields.io/badge/tool%20tests-77-brightgreen?style=flat-square)
-![mutation probes: 18 caught](https://img.shields.io/badge/mutation%20probes-18%20caught-8A2BE2?style=flat-square)
+![tool tests: 86](https://img.shields.io/badge/tool%20tests-86-brightgreen?style=flat-square)
+![mutation probes: 22 caught](https://img.shields.io/badge/mutation%20probes-22%20caught-8A2BE2?style=flat-square)
 ![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
-![lines of code: 8 253](https://img.shields.io/badge/lines%20of%20code-8%20253-blue?style=flat-square)
+![lines of code: 8 631](https://img.shields.io/badge/lines%20of%20code-8%20631-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 4 608 lines](https://img.shields.io/badge/C%2B%2B-4%20608%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 565 lines](https://img.shields.io/badge/Python-3%20565%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![C++: 4 747 lines](https://img.shields.io/badge/C%2B%2B-4%20747%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 3 801 lines](https://img.shields.io/badge/Python-3%20801%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![aggregates: 10 backends](https://img.shields.io/badge/aggregates-10%20backends-informational?style=flat-square)
@@ -202,8 +202,14 @@ $EDITOR secrets_local.h                       # SSID, password, gateway token
 pio run -e cardputer-local -t upload
 ```
 
-The device then skips the setup screen entirely. The reset gesture still
-works, so it is not a one-way door.
+The device then skips the setup screen entirely. The compiled-in values
+apply **once per distinct value set**: a fingerprint of what was last seeded
+is kept in NVS, so reflashing with a changed `secrets_local.h` takes effect
+even on a device that already carries an older configuration — while a config
+typed on the device survives until the baked values themselves change. The
+reset gesture still works, so it is not a one-way door. Prefer setting
+`M5SH_GW_HOST` to the gateway's IP; an empty host relies on the mDNS lookup
+every time the address is lost.
 
 > ⚠️ **That binary contains your Wi-Fi password and gateway token in clear
 > text.** Anyone holding the device or the `.bin` can read them out. Never

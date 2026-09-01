@@ -126,6 +126,8 @@ bool discoverGateway() {
     snprintf(g_cfg.host, sizeof(g_cfg.host), "%u.%u.%u.%u", ip[0], ip[1],
              ip[2], ip[3]);
     g_cfg.port = MDNS.port(0);
+    snprintf(g_status.cfgHost, sizeof(g_status.cfgHost), "%s", g_cfg.host);
+    g_status.cfgPort = g_cfg.port;
     store::Config saved;
     if (store::load(saved)) {
         strncpy(saved.host, g_cfg.host, sizeof(saved.host) - 1);
@@ -151,11 +153,23 @@ void runJob(const Job& job) {
     r.len = 0;
     r.body[0] = 0;
 
+    // These dead ends used to return without a word: no error, no counter.
+    // The diagnostics screen then showed "Abrufe 0" on a device that was
+    // polling constantly, and the one screen built to end the guessing had
+    // nothing to say about the most likely failures.
     if (WiFi.status() != WL_CONNECTED && !connectWifi()) {
+        ++g_status.requests;
+        ++g_status.failed;
+        snprintf(g_status.lastError, sizeof(g_status.lastError),
+                 "WLAN-Verbindung fehlgeschlagen");
         xQueueOverwrite(g_replies, &r);
         return;
     }
     if (g_cfg.host[0] == 0 && !discoverGateway()) {
+        ++g_status.requests;
+        ++g_status.failed;
+        snprintf(g_status.lastError, sizeof(g_status.lastError),
+                 "Gateway nicht gefunden (mDNS)");
         xQueueOverwrite(g_replies, &r);
         return;
     }
@@ -251,6 +265,9 @@ void worker(void*) {
 
 void begin(const store::Config& cfg) {
     g_cfg = cfg;
+    snprintf(g_status.cfgHost, sizeof(g_status.cfgHost), "%s", cfg.host);
+    g_status.cfgPort = cfg.port;
+    g_status.haveToken = cfg.token[0] != 0;
     if (g_task) return;
     g_jobs = xQueueCreate(kQueueLen, sizeof(Job));
     g_replies = xQueueCreate(1, sizeof(Reply));   // overwrite semantics

@@ -175,6 +175,28 @@ A comment explaining a removed defect contains the very words a search looks
 for, so a check that reads the raw file passes while the defect is back. Strip
 comments first — and mutate every such check once to watch it fail.
 
+### The baked config only seeded an empty NVS — and an empty host is "valid"
+
+`store::load()` accepts a configuration without a host (mDNS can supply one),
+so a device set up once — by hand, or by an earlier local build whose
+`secrets_local.h` had no host — held on to that configuration through every
+reflash. The seed ran only when `load()` failed, which it never did again.
+The result: Wi-Fi connects, the screen fills with placeholders, and nothing
+in the newer binary can reach the device.
+
+Now a fingerprint of the baked values lives in NVS and the seed fires
+whenever the compiled-in set *changes* (`core::configFingerprint`, pinned and
+mutation-probed). Corollary for diagnosis: the screen shows the configured
+target (`GW <host>:<port>  Token ja/FEHLT`) before the first request, because
+a device aimed at nothing produces no URL, no HTTP status and no error.
+
+### A dead end that returns silently looks like "no polling at all"
+
+`runJob()`'s early returns — Wi-Fi down, mDNS discovery failed — set no error
+and bumped no counter. The diagnostics screen then showed `Abrufe 0` on a
+device that was polling constantly. Every abandoned request now counts as a
+failed fetch and names its reason.
+
 ---
 
 ## Testing

@@ -26,6 +26,12 @@ bool load(Config& out);
 bool save(const Config& cfg);
 void erase();
 
+// What a local build last seeded into NVS, as a core::configFingerprint()
+// value; 0 = never seeded. Lets a reflash with changed secrets_local.h take
+// effect even though a (stale) config is already stored.
+uint32_t seedFingerprint();
+void setSeedFingerprint(uint32_t fp);
+
 // --- RTC memory: survives deep sleep, lost on power cycle ----------------
 
 // The remembered access point. Reconnecting with a known BSSID and channel

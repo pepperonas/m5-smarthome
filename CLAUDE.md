@@ -161,6 +161,18 @@ picks the TCA8418 reader for the ADV and the GPIO matrix for the original; for
 anything else it installs a do-nothing reader and prints to serial only. The
 firmware now says so on screen.
 
+**The baked seed only ran into an empty NVS — the likeliest cause of
+"WLAN blue, everything else dead".** `store::load()` accepts a config with an
+empty host (mDNS may supply one), so whatever the FIRST setup or local build
+stored survived every reflash; changed values in `secrets_local.h` never
+reached the device. The seed now fires once per distinct baked value set
+(`core::configFingerprint` + NVS `seedfp`, pinned and mutation-probed via
+`python3 tools/mutate.py shell`). Related: `runJob`'s dead ends (Wi-Fi down,
+mDNS failed) used to return silently — diagnostics said "Abrufe 0" on a
+device polling constantly; they now count as failures and name their reason,
+and the diagnostics screen prints the configured target
+(`GW <host>:<port>  Token ja/FEHLT`) before the first request.
+
 **Press `d` before guessing.** The diagnostics screen reports link state, the
 device IP, the exact URL last requested, the last HTTP status or transport
 error, request/failure counts, whether a snapshot was ever parsed, free heap
