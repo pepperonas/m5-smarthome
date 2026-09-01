@@ -62,6 +62,9 @@ jobs:
         run: |
           python tools/mutate.py gateway
           python tools/mutate.py firmware
+          # The Arduino shell has no host tests; its invariants are pinned
+          # against the source, and those pins earn the same distrust.
+          python tools/mutate.py shell
 
       # The IR table is generated from the canonical CSV. If a regenerated
       # table differs from what is committed, the two have drifted — and a

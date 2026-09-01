@@ -97,3 +97,18 @@ def test_the_journal_is_not_committable():
     """It holds source text mid-edit; it has no business in a commit."""
     ignored = (ROOT / ".gitignore").read_text()
     assert ".mutate-journal.json" in ignored
+
+
+def test_every_mutation_suite_runs_in_ci_and_preflight():
+    """Adding a suite to one runner and not the other is silent: the probes
+    exist, look maintained, and never execute. That happened with the shell
+    suite — it reached preflight and missed CI entirely."""
+    import glob
+    workflow = pathlib.Path(
+        glob.glob(str(ROOT / ".github/workflows/*.yml"))[0]).read_text()
+    preflight = (ROOT / "tools" / "preflight.sh").read_text()
+    for suite in mutate.SUITES:
+        assert f"mutate.py {suite}" in workflow, (
+            f"mutation suite {suite!r} never runs in CI")
+        assert f"mutate.py {suite}" in preflight, (
+            f"mutation suite {suite!r} never runs in preflight")
