@@ -428,6 +428,21 @@ void test_every_field_participates_in_the_fingerprint(void) {
         configFingerprint("net", "pw", "10.0.0.2", 5010, "toc"));
 }
 
+// An SSID whose FNV-1a run — including the empty remaining fields — lands
+// exactly on 0. Found by meet-in-the-middle inversion; there is no way to
+// stumble on it, which is why the guard needs a test rather than trust.
+static const char* const kZeroHashSsid = "\xCC\x24\x31\xC4";
+
+void test_the_fingerprint_never_collides_with_the_never_seeded_sentinel(void) {
+    // NVS returns 0 for a key that was never written, so 0 means "never
+    // seeded". A hash that can produce 0 would therefore mean "never seeded"
+    // as well — and the device would silently stop applying changed
+    // credentials, which is exactly the bug this fingerprint replaces.
+    // Fed the input that hashes to 0 without the guard.
+    TEST_ASSERT_NOT_EQUAL_UINT32(
+        0u, configFingerprint(kZeroHashSsid, "", "", 0, ""));
+}
+
 void test_field_boundaries_are_not_ambiguous(void) {
     // "ab"+"c" and "a"+"bc" concatenate identically; the separator in the
     // hash must keep them apart, or two different configs could share a
@@ -571,6 +586,7 @@ int main(int, char**) {
     RUN_TEST(test_the_same_config_gives_the_same_fingerprint);
     RUN_TEST(test_every_field_participates_in_the_fingerprint);
     RUN_TEST(test_field_boundaries_are_not_ambiguous);
+    RUN_TEST(test_the_fingerprint_never_collides_with_the_never_seeded_sentinel);
     RUN_TEST(test_enter_opens_the_selected_row_on_the_home_screen);
     RUN_TEST(test_arrows_and_digits_agree_about_every_home_row);
     RUN_TEST(test_every_screen_reachable_from_home_responds_to_enter);

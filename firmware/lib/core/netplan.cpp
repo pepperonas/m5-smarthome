@@ -61,7 +61,11 @@ uint32_t configFingerprint(const char* ssid, const char* pass,
     h = (h ^ static_cast<uint8_t>(port & 0xFF)) * 16777619u;
     h = (h ^ static_cast<uint8_t>(port >> 8)) * 16777619u;
     mix(token);
-    return h;
+    // NVS yields 0 for a key that was never written, so 0 already means
+    // "never seeded". A fingerprint of 0 would mean the same thing, and the
+    // device would silently stop applying changed credentials — precisely the
+    // defect this fingerprint exists to prevent. Reserve the sentinel.
+    return h ? h : 1u;
 }
 
 }  // namespace core

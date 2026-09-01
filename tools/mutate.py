@@ -87,6 +87,8 @@ MUTATIONS = {
          "return o.active;"),
         ("two typos are acted on", "lib/core/command.cpp",
          "        if (dist == 2) return 55;", "        if (dist == 2) return 65;"),
+        ("the fingerprint may collide with the never-seeded sentinel",
+         "lib/core/netplan.cpp", "    return h ? h : 1u;", "    return h;"),
         ("a stale AP hint is trusted", "lib/core/netplan.cpp",
          "    return (nowEpoch - h.savedAtEpoch) < kApHintTtlS;", "    return true;"),
         ("sleep interrupts an in-flight request", "lib/core/netplan.cpp",
