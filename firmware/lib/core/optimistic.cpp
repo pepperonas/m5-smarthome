@@ -1,7 +1,15 @@
 #include "optimistic.h"
 
+#include <cstring>
+
 namespace core {
 namespace {
+void copyText(char* dst, size_t cap, const char* src) {
+    size_t n = 0;
+    while (src[n] && n < cap - 1) { dst[n] = src[n]; ++n; }
+    dst[n] = 0;
+}
+
 bool alive(const Overlay& o, uint32_t nowMs) {
     // Comparing against a wrapped millis() would resurrect stale claims; the
     // subtraction below is wrap-safe for the ~49-day counter.
@@ -33,6 +41,23 @@ uint32_t OverlayStore::claim(Field f, int key, int value, uint32_t nowMs,
     slot->token = nextToken_++;
     if (nextToken_ == 0) nextToken_ = 1;
     return slot->token;
+}
+
+uint32_t OverlayStore::claimText(Field f, const char* text, uint32_t nowMs,
+                                 bool viaIr) {
+    const uint32_t token = claim(f, 0, 0, nowMs, viaIr);
+    for (Overlay& o : slots_) {
+        if (o.active && o.token == token) {
+            int n = 0;
+            while (text && text[n] && n < kOverlayTextLen - 1) {
+                o.text[n] = text[n];
+                ++n;
+            }
+            o.text[n] = 0;
+            break;
+        }
+    }
+    return token;
 }
 
 void OverlayStore::reject(uint32_t token) {
@@ -93,6 +118,10 @@ void OverlayStore::apply(Dash& d, uint32_t nowMs) const {
             case Field::TfMute:  d.tf.mute = o.value != 0; break;
             case Field::DiscoOn: d.disco.on = o.value != 0; break;
             case Field::FogOn:   d.fog.on = o.value != 0; break;
+            case Field::YamInput:  copyText(d.yam.input, sizeof(d.yam.input), o.text); break;
+            case Field::TfInput:   copyText(d.tf.input, sizeof(d.tf.input), o.text); break;
+            case Field::LwEffect:  copyText(d.lw.effect, sizeof(d.lw.effect), o.text); break;
+            case Field::DiscoMode: copyText(d.disco.mode, sizeof(d.disco.mode), o.text); break;
         }
     }
     // Recount lit rooms, otherwise the header contradicts the tiles.
@@ -129,6 +158,10 @@ void OverlayStore::settleWith(const Dash& d, uint32_t nowMs) {
             case Field::TfMute:  agrees = d.tf.mute == (o.value != 0); break;
             case Field::DiscoOn: agrees = d.disco.on == (o.value != 0); break;
             case Field::FogOn:   agrees = d.fog.on == (o.value != 0); break;
+            case Field::YamInput:  agrees = strcmp(d.yam.input, o.text) == 0; break;
+            case Field::TfInput:   agrees = strcmp(d.tf.input, o.text) == 0; break;
+            case Field::LwEffect:  agrees = strcmp(d.lw.effect, o.text) == 0; break;
+            case Field::DiscoMode: agrees = strcmp(d.disco.mode, o.text) == 0; break;
         }
         if (agrees) o.active = false;    // reality caught up; stop overriding
     }

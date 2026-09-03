@@ -104,6 +104,8 @@ uint32_t claimFor(const core::Intent& in, uint32_t nowMs, bool viaIr) {
         if (on || off) return g_overlays.claim(Field::LwOn, 0, on, nowMs);
         if (strcmp(in.action, "bri") == 0)
             return g_overlays.claim(Field::LwBri, 0, in.arg2, nowMs);
+        if (strcmp(in.action, "effect") == 0)
+            return g_overlays.claimText(Field::LwEffect, in.name, nowMs);
     } else if (strcmp(in.target, "yam") == 0) {
         if (on || off) return g_overlays.claim(Field::YamOn, 0, on, nowMs);
         if (strcmp(in.action, "vol") == 0)
@@ -111,6 +113,8 @@ uint32_t claimFor(const core::Intent& in, uint32_t nowMs, bool viaIr) {
                                     g_dash.yam.raw + in.arg * 5, nowMs);
         if (strcmp(in.action, "mute") == 0)
             return g_overlays.claim(Field::YamMute, 0, !g_dash.yam.mute, nowMs);
+        if (strcmp(in.action, "input") == 0)
+            return g_overlays.claimText(Field::YamInput, in.name, nowMs);
     } else if (strcmp(in.target, "tf") == 0) {
         if (strcmp(in.action, "power") == 0)
             return g_overlays.claim(Field::TfOn, 0, !g_dash.tf.on, nowMs, viaIr);
@@ -119,8 +123,12 @@ uint32_t claimFor(const core::Intent& in, uint32_t nowMs, bool viaIr) {
                                     g_dash.tf.volume + in.arg, nowMs, viaIr);
         if (strcmp(in.action, "mute") == 0)
             return g_overlays.claim(Field::TfMute, 0, !g_dash.tf.mute, nowMs, viaIr);
+        if (strcmp(in.action, "input") == 0)
+            return g_overlays.claimText(Field::TfInput, in.name, nowMs, viaIr);
     } else if (strcmp(in.target, "disco") == 0) {
         if (on || off) return g_overlays.claim(Field::DiscoOn, 0, on, nowMs);
+        if (strcmp(in.action, "mode") == 0)
+            return g_overlays.claimText(Field::DiscoMode, in.name, nowMs);
     } else if (strcmp(in.target, "fog") == 0) {
         if (on || off) return g_overlays.claim(Field::FogOn, 0, on, nowMs);
     }

@@ -242,6 +242,17 @@ snapshot could land on top of an unread refusal: the overlay stayed on screen
 and nothing ever rolled it back. Verdicts are three words and now have their
 own queue, as deep as the job queue, drained before snapshots.
 
+### Named values were not optimistic, so cycling counted from the wrong place
+
+Input, effect and mode changes bypassed the overlay store: the screen kept
+the old input until the next poll — a straight violation of "a press moves
+the screen now" — and the cycle index was a private counter that started at
+0 and drifted the moment the phone app changed something. On HDMI2, `i`
+jumped to AirPlay. Named fields are overlays now (`claimText`), `handleKey`
+sees the view with the pending value and cycles from whatever the screen
+shows, and after 4 s without confirmation it snaps back to the truth like
+every other claim.
+
 ### A reused DHCP lease can be someone else's now
 
 The fast wake path reconnects with the stored BSSID, channel *and* the last

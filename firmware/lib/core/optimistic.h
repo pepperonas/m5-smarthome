@@ -28,12 +28,19 @@ constexpr uint32_t kUnconfirmedMs = 10000;
 enum class Field : uint8_t {
     RoomOn, RoomBri, LwOn, LwBri, YamOn, YamRaw, YamMute,
     TfOn, TfVol, TfMute, DiscoOn, FogOn,
+    // Named values. These bypassed the overlay once, so an input change did
+    // not move the screen until the next poll — and a second quick press
+    // cycled from the stale value instead of the one just chosen.
+    YamInput, TfInput, LwEffect, DiscoMode,
 };
+
+constexpr int kOverlayTextLen = 16;
 
 struct Overlay {
     Field field = Field::RoomOn;
     int key = 0;                 // room id where the field needs one
     int value = 0;
+    char text[kOverlayTextLen] = {0};   // for the named fields
     uint32_t expiresAt = 0;
     uint32_t token = 0;
     bool viaIr = false;          // fired by infrared: nobody will confirm it
@@ -47,6 +54,10 @@ public:
     // Records a claim and returns its token (never 0).
     uint32_t claim(Field f, int key, int value, uint32_t nowMs,
                    bool viaIr = false);
+
+    // Same, for the named fields (input, effect, mode).
+    uint32_t claimText(Field f, const char* text, uint32_t nowMs,
+                       bool viaIr = false);
 
     // The request failed: drop the claim so the screen tells the truth again.
     void reject(uint32_t token);

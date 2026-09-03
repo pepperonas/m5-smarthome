@@ -298,11 +298,20 @@ void test_input_cycling_carries_the_name(void) {
 }
 
 void test_input_cycling_wraps(void) {
-    Dash d = makeDash();
+    // The main loop hands handleKey the *view* — snapshot plus optimistic
+    // overlays — so between two quick presses the screen already shows the
+    // input just chosen. Mirror that here, or every press restarts from
+    // the stale snapshot value (which is what the house would show if the
+    // request never landed, and is right for that case).
+    Dash d = makeDash();                          // tf.input == "AUX"
     UiState st;
     st.screen = Screen::Teufel;
-    for (int i = 0; i < kTeufelInputCount; ++i) handleKey(st, chr('i'), d, 1000);
+    for (int i = 0; i < kTeufelInputCount; ++i) {
+        KeyResult r = handleKey(st, chr('i'), d, 1000);
+        strcpy(d.tf.input, r.intent.name);        // what the overlay does
+    }
     TEST_ASSERT_EQUAL(0, st.tfInput);            // back to the start
+    TEST_ASSERT_EQUAL_STRING("AUX", d.tf.input);
 }
 
 void test_effect_and_mode_cycling_carry_names(void) {
@@ -397,3 +406,43 @@ void test_keys_that_mean_nothing_here_do_nothing(void) {
     TEST_ASSERT_FALSE(r.intent.valid);
     TEST_ASSERT_TRUE(st.screen == Screen::Disco);
 }
+
+// Cycling starts from what the house currently shows, not from a private
+// index that begins at 0 and drifts the moment the phone app changes
+// something. On HDMI2, 'i' must go to HDMI3 — not jump back to AirPlay.
+void test_input_cycling_starts_from_the_current_input(void) {
+    Dash d = makeDash();
+    strcpy(d.yam.input, "HDMI2");
+    UiState st;
+    st.screen = Screen::Yamaha;
+    KeyResult r = handleKey(st, chr('i'), d, 1000);
+    TEST_ASSERT_TRUE(r.intent.valid);
+    TEST_ASSERT_EQUAL_STRING("HDMI3", r.intent.name);
+
+    strcpy(d.disco.mode, "solid");
+    st.screen = Screen::Disco;
+    r = handleKey(st, chr('o'), d, 1000);
+    TEST_ASSERT_EQUAL_STRING("strobe", r.intent.name);
+
+    d.lw.warnOwned = false;
+    strcpy(d.lw.effect, "fire");           // last in the list: wraps
+    st.screen = Screen::Lichtwerk;
+    r = handleKey(st, chr('e'), d, 1000);
+    TEST_ASSERT_EQUAL_STRING("solid", r.intent.name);
+}
+
+void test_an_unlisted_current_value_does_not_break_cycling(void) {
+    // "NET RADIO" is a real receiver input the remote does not offer. The
+    // press must still land on a valid entry rather than on garbage.
+    Dash d = makeDash();
+    strcpy(d.yam.input, "NET RADIO");
+    UiState st;
+    st.screen = Screen::Yamaha;
+    KeyResult r = handleKey(st, chr('i'), d, 1000);
+    TEST_ASSERT_TRUE(r.intent.valid);
+    bool listed = false;
+    for (int i = 0; i < kYamahaInputCount; ++i)
+        if (strcmp(r.intent.name, kYamahaInputs[i]) == 0) listed = true;
+    TEST_ASSERT_TRUE(listed);
+}
+

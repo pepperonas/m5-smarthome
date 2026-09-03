@@ -277,6 +277,58 @@ void test_an_ir_press_is_marked_unconfirmed_and_stays_that_way(void) {
     TEST_ASSERT_FALSE(ov.hasUnconfirmed(1000 + kUnconfirmedMs + 1));
 }
 
+// Input, effect and mode changes used to bypass the overlay entirely: the
+// screen kept showing the old input until the next poll, which broke the
+// "a press moves the screen now" rule — and made a second quick press cycle
+// from the stale value instead of the one just chosen.
+void test_a_named_change_shows_immediately_and_settles_on_agreement(void) {
+    Dash d = liveDash(1000);                      // yam.input == "Spotify"
+    OverlayStore ov;
+    ov.claimText(Field::YamInput, "HDMI3", 1000);
+
+    Dash view = d;
+    ov.apply(view, 1200);
+    TEST_ASSERT_EQUAL_STRING("HDMI3", view.yam.input);
+
+    // The house still says Spotify: the claim stands.
+    ov.settleWith(d, 1300);
+    TEST_ASSERT_EQUAL(1, ov.activeCount(1300));
+
+    // The house now says HDMI3: nothing to override any more.
+    Dash agreed = liveDash(1500);
+    strcpy(agreed.yam.input, "HDMI3");
+    ov.settleWith(agreed, 1500);
+    TEST_ASSERT_EQUAL(0, ov.activeCount(1500));
+}
+
+void test_a_named_claim_that_is_never_honoured_expires(void) {
+    Dash d = liveDash(1000);
+    OverlayStore ov;
+    ov.claimText(Field::DiscoMode, "strobe", 1000);
+    Dash view = d;
+    ov.apply(view, 1000 + kOverlayTtlMs);
+    TEST_ASSERT_EQUAL_STRING("rainbow", view.disco.mode);   // truth again
+}
+
+void test_repeated_named_presses_reuse_one_slot(void) {
+    OverlayStore ov;
+    for (int i = 0; i < kMaxOverlays + 3; ++i) {
+        ov.claimText(Field::LwEffect, i % 2 ? "fire" : "pulse", 1000 + i);
+    }
+    TEST_ASSERT_EQUAL(1, ov.activeCount(2000));
+}
+
+void test_a_rejected_named_change_rolls_back(void) {
+    Dash d = liveDash(1000);
+    OverlayStore ov;
+    const uint32_t tok = ov.claimText(Field::TfInput, "USB", 1000);
+    TEST_ASSERT_NOT_EQUAL(0u, tok);
+    ov.reject(tok);
+    Dash view = d;
+    ov.apply(view, 1100);
+    TEST_ASSERT_EQUAL_STRING("AUX", view.tf.input);
+}
+
 void test_setting_brightness_also_shows_the_room_as_on(void) {
     // hue-controller auto-activates a dark group when brightness is set;
     // leaving the tile dark would contradict what the lamp does.
@@ -706,6 +758,8 @@ void test_only_the_first_character_is_used(void);
 void test_the_output_is_untouched_when_there_is_no_event(void);
 
 void test_diagnostics_is_reachable_and_leavable(void);
+void test_input_cycling_starts_from_the_current_input(void);
+void test_an_unlisted_current_value_does_not_break_cycling(void);
 void test_diagnostics_sends_nothing(void);
 void test_the_diagnostics_key_does_not_collide(void);
 
@@ -730,6 +784,8 @@ int main(int, char**) {
     RUN_TEST(test_display_folding_covers_the_german_set);
     RUN_TEST(test_display_folding_never_grows_a_string);
     RUN_TEST(test_folded_names_still_match_typed_umlauts);
+    RUN_TEST(test_input_cycling_starts_from_the_current_input);
+    RUN_TEST(test_an_unlisted_current_value_does_not_break_cycling);
     RUN_TEST(test_action_bodies_match_the_gateway_contract);
     RUN_TEST(test_an_invalid_intent_produces_no_body);
     RUN_TEST(test_a_body_that_would_not_fit_is_refused_not_truncated);
@@ -741,6 +797,10 @@ int main(int, char**) {
     RUN_TEST(test_repeated_presses_reuse_one_slot);
     RUN_TEST(test_an_ir_press_is_marked_unconfirmed_and_stays_that_way);
     RUN_TEST(test_setting_brightness_also_shows_the_room_as_on);
+    RUN_TEST(test_a_named_change_shows_immediately_and_settles_on_agreement);
+    RUN_TEST(test_a_named_claim_that_is_never_honoured_expires);
+    RUN_TEST(test_repeated_named_presses_reuse_one_slot);
+    RUN_TEST(test_a_rejected_named_change_rolls_back);
 
     RUN_TEST(test_room_on_off_in_german);
     RUN_TEST(test_a_prefix_is_enough);

@@ -41,6 +41,20 @@ int cycle(int idx, int count, int dir) {
     return (idx + dir + count) % count;
 }
 
+// Cycle from what the house currently shows, not from a private index that
+// starts at 0 and drifts the moment the phone app changes something: on
+// HDMI2, 'i' goes to HDMI3, not back to AirPlay. A current value the remote
+// does not offer (NET RADIO) keeps the last index, which is still a valid
+// entry.
+int cycleFrom(const char* current, const char* const* list, int count,
+              int lastIdx, int dir) {
+    int idx = lastIdx;
+    for (int i = 0; i < count; ++i) {
+        if (current && strcmp(current, list[i]) == 0) { idx = i; break; }
+    }
+    return cycle(idx, count, dir);
+}
+
 Intent make(const char* target, const char* action, int arg = 0,
             bool hasArg = false, int arg2 = 0, bool hasArg2 = false) {
     Intent i;
@@ -275,8 +289,8 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
                     toast(st, "Strip-Warn aktiv", nowMs);
                     return out;
                 }
-                st.lwEffect = cycle(st.lwEffect, kLwEffectCount,
-                                    k.left ? -1 : 1);
+                st.lwEffect = cycleFrom(d.lw.effect, kLwEffects, kLwEffectCount,
+                                        st.lwEffect, k.left ? -1 : 1);
                 out.intent = make("lw", "effect");
                 setStr(out.intent.name, sizeof(out.intent.name),
                        kLwEffects[st.lwEffect]);
@@ -311,7 +325,8 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
                 return out;
             }
             if (k.ch == 'i') {
-                st.yamInput = cycle(st.yamInput, kYamahaInputCount, 1);
+                st.yamInput = cycleFrom(d.yam.input, kYamahaInputs,
+                                        kYamahaInputCount, st.yamInput, 1);
                 out.intent = make("yam", "input");
                 setStr(out.intent.name, sizeof(out.intent.name),
                        kYamahaInputs[st.yamInput]);
@@ -350,7 +365,8 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
                 return out;
             }
             if (k.ch == 'i') {
-                st.tfInput = cycle(st.tfInput, kTeufelInputCount, 1);
+                st.tfInput = cycleFrom(d.tf.input, kTeufelInputs,
+                                       kTeufelInputCount, st.tfInput, 1);
                 out.intent = make("tf", "input");
                 setStr(out.intent.name, sizeof(out.intent.name),
                        kTeufelInputs[st.tfInput]);
@@ -370,8 +386,9 @@ KeyResult handleKey(UiState& st, const Key& k, const Dash& d, uint32_t nowMs) {
 
         case Screen::Disco: {
             if (k.ch == 'o' || k.right || k.left) {
-                st.discoMode = cycle(st.discoMode, kDiscoModeCount,
-                                     k.left ? -1 : 1);
+                st.discoMode = cycleFrom(d.disco.mode, kDiscoModes,
+                                         kDiscoModeCount, st.discoMode,
+                                         k.left ? -1 : 1);
                 out.intent = make("disco", "mode");
                 setStr(out.intent.name, sizeof(out.intent.name),
                        kDiscoModes[st.discoMode]);

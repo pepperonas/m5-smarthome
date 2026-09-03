@@ -229,6 +229,17 @@ def test_the_header_wording_comes_from_the_tested_core(hwui_src):
         "can see what it says after a wake")
 
 
+def test_named_changes_are_optimistic_too(main_src):
+    """Input, effect and mode bypassed the overlay: the screen did not move
+    until the next poll, and a second quick press cycled from the stale
+    value. Every named action must claim a text overlay."""
+    body = _function_body(main_src, "claimFor")
+    assert body is not None
+    for field in ("YamInput", "TfInput", "LwEffect", "DiscoMode"):
+        assert f"claimText(Field::{field}" in body, (
+            f"{field} is no longer claimed optimistically")
+
+
 def _function_body(src, name):
     """Crude brace matcher — enough for one C++ function body."""
     m = re.search(rf"\b{name}\s*\([^)]*\)\s*\{{", src)

@@ -192,6 +192,13 @@ during backoff; presses always try. ⚠️ Raise `g_dashPending` BEFORE the
 queue insert — the worker clears it on take, and a flag raised after that
 clear stops polling for good (pinned + mutation-probed).
 
+**Named values (input/effect/mode) are overlays too** — they bypassed the
+store, so the screen did not move until the next poll and the cycle index was
+a private counter from 0 (on HDMI2, `i` jumped to AirPlay). `claimText` +
+`cycleFrom(current, …)`; the view handed to `handleKey` carries the pending
+value, so quick repeated presses advance and a never-confirmed one snaps back
+after 4 s like every other claim.
+
 **Snapshots and verdicts no longer share one overwrite slot** — a snapshot
 landing on an unread refusal left the optimistic change on screen forever.
 Verdicts have their own queue, drained first.
