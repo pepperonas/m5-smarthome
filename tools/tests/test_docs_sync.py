@@ -295,3 +295,40 @@ def test_documented_files_exist():
     for target in re.findall(r"\]\((?!https?:)([^)#]+)", text):
         path = ROOT / target
         assert path.exists(), f"README links to missing {target}"
+
+
+def _core_modules():
+    """Every pure module, from the headers on disk."""
+    d = ROOT / "firmware" / "lib" / "core"
+    return sorted(p.stem for p in d.glob("*.h"))
+
+
+def test_every_core_module_appears_in_the_architecture_table():
+    """A new pure module is a new thing a reader has to be told about. The
+    module table drifted silently when `reset_gesture` was added — nothing
+    broke, so nothing noticed."""
+    text = (ROOT / "docs" / "ARCHITECTURE.md").read_text()
+    missing = [m for m in _core_modules() if f"| `{m}` |" not in text]
+    assert not missing, (
+        f"core modules absent from the ARCHITECTURE.md module table: {missing}")
+
+
+def test_every_core_module_appears_in_the_testing_table():
+    text = (ROOT / "docs" / "TESTING.md").read_text()
+    missing = [m for m in _core_modules() if f"| `{m}` |" not in text]
+    assert not missing, (
+        f"core modules absent from the TESTING.md module table: {missing}")
+
+
+def test_the_module_tables_name_no_module_that_does_not_exist():
+    """The other direction: a renamed or deleted module leaves a row behind
+    that reads as documentation of something real."""
+    known = set(_core_modules()) | {
+        # Gateway modules, documented in the same tables.
+        "aggregate", "actions", "yamaha_xml", "backends", "poller", "config",
+    }
+    for doc in ("ARCHITECTURE.md", "TESTING.md"):
+        text = (ROOT / "docs" / doc).read_text()
+        rows = re.findall(r"^\| `([a-z_]+)` \| ", text, re.M)
+        unknown = sorted({r for r in rows if r not in known})
+        assert not unknown, f"{doc} documents modules that do not exist: {unknown}"

@@ -51,6 +51,8 @@ what makes the interesting half runnable on a laptop.
 | `optimistic` | which local assumptions override the snapshot, for how long |
 | `netplan` | poll intervals, backlight steps, sleep threshold, backoff |
 | `ui_state` | screens, key handling, the confirmation gate |
+| `ir_teufel` | the generated code table, checked against its CSV |
+| `reset_gesture` | when a held key means "wipe the credentials" |
 | `ir_nec` | NEC bit framing — the arithmetic, not the timing |
 | `aggregate` | eleven backend replies into one small snapshot |
 | `actions` | one named action into one backend request |

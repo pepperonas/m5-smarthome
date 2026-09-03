@@ -164,6 +164,7 @@ runs under `pio test -e native`:
 | `keymap` | a keyboard report to a key press |
 | `command` | fuzzy matching for the typed command line |
 | `optimistic` | which local assumptions override the snapshot, and for how long |
+| `reset_gesture` | when a held key means "wipe the credentials" |
 | `netplan` | poll intervals, backlight steps, sleep threshold, backoff |
 | `ui_state` | screens, key handling, the confirmation gate |
 | `ir_nec` | NEC bit framing (the arithmetic, not the timing) |
