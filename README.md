@@ -8,20 +8,20 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 250 passing](https://img.shields.io/badge/tests-250%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
-![firmware tests: 92](https://img.shields.io/badge/firmware%20tests-92-brightgreen?style=flat-square)
+![tests: 285 passing](https://img.shields.io/badge/tests-285%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 101](https://img.shields.io/badge/firmware%20tests-101-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
-![tool tests: 87](https://img.shields.io/badge/tool%20tests-87-brightgreen?style=flat-square)
-![mutation probes: 23 caught](https://img.shields.io/badge/mutation%20probes-23%20caught-8A2BE2?style=flat-square)
+![tool tests: 113](https://img.shields.io/badge/tool%20tests-113-brightgreen?style=flat-square)
+![mutation probes: 35 caught](https://img.shields.io/badge/mutation%20probes-35%20caught-8A2BE2?style=flat-square)
 ![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
-![lines of code: 8 668](https://img.shields.io/badge/lines%20of%20code-8%20668-blue?style=flat-square)
+![lines of code: 9 268](https://img.shields.io/badge/lines%20of%20code-9%20268-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 4 767 lines](https://img.shields.io/badge/C%2B%2B-4%20767%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 3 818 lines](https://img.shields.io/badge/Python-3%20818%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![C++: 5 154 lines](https://img.shields.io/badge/C%2B%2B-5%20154%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 4 031 lines](https://img.shields.io/badge/Python-4%20031%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![aggregates: 10 backends](https://img.shields.io/badge/aggregates-10%20backends-informational?style=flat-square)
@@ -322,7 +322,12 @@ paid for.
 
 - **A failed poll is never rendered as "no data".** The last value stays on
   screen, dimmed, with `Stand N s alt` in the header. A Wi-Fi hiccup must not
-  look like a dead house.
+  look like a dead house. After a wake the header says `Stand: vor dem
+  Schlafen` instead — the clock restarted, so it cannot know the age, and
+  counting uptime up from zero would dress that ignorance up as freshness.
+- **Room names are shown in ASCII** (`Kueche`, like the rest of the UI). The
+  panel font has no umlaut glyphs and silently skipped them; typing `küche`
+  still works, matching folds both sides.
 - **A press moves the screen immediately.** The request follows behind it. If
   the gateway refuses, the screen rolls back and says so.
 - **The Teufel is always marked with `~`.** The Pi has no feedback path to

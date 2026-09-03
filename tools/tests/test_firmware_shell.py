@@ -120,7 +120,7 @@ def test_network_dead_ends_are_reported_not_silent(hwnet_src):
         after = hwnet_src[at:at + 300]
         assert "++g_status.failed" in before, (
             f"the dead end behind {msg!r} no longer counts as a failure")
-        assert "xQueueOverwrite" in after, (
+        assert "deliver(r)" in after, (
             f"the dead end behind {msg!r} no longer answers the UI task")
 
 
@@ -133,6 +133,100 @@ def test_the_diagnostics_screen_names_the_configured_gateway(hwui_src):
     assert '"GW %s:%u  Token %s"' in body, (
         "diagnostics no longer draws the configured host and port")
     assert "FEHLT" in body, "diagnostics no longer flags a missing token"
+
+
+def test_the_wire_format_is_built_in_the_tested_core(main_src):
+    """Inline JSON in the shell once sent a named value in the wrong field —
+    every input/effect/mode press became a 400. The format now lives in
+    core::buildActionBody, pinned from both ends by the contract test."""
+    body = _function_body(main_src, "sendIntent")
+    assert body is not None
+    assert "core::buildActionBody" in body
+    assert '{\\"target\\"' not in main_src, "hand-built JSON is back in the shell"
+
+
+def test_an_unsent_action_is_rolled_back(main_src):
+    """requestAction() fails when the job queue is full — a realistic case,
+    presses pile up during a reconnect. Ignoring that left the optimistic
+    change on screen with nothing ever sent."""
+    body = _function_body(main_src, "sendIntent")
+    assert "!net::requestAction(" in body, (
+        "the result of requestAction is ignored again")
+    after = body[body.index("!net::requestAction("):]
+    assert "reject(token)" in after, "a dropped action no longer rolls back"
+
+
+def test_a_restored_snapshot_is_flagged_not_zeroed(main_src):
+    """Zeroing receivedAtMs made 'now minus receivedAt' read as uptime: fresh
+    for 8 s, then 'Stand 12s alt' on data that was forty minutes old."""
+    body = _function_body(main_src, "setup")
+    assert "core::markRestoredFromSleep(g_dash)" in body
+    assert "receivedAtMs = 0" not in main_src, (
+        "the wake path zeroes the timestamp again, which is uptime, not age")
+
+
+def test_snapshot_polls_are_coalesced(hwnet_src):
+    """During an outage the poller kept queueing snapshot jobs until the
+    queue was full of them; presses were then dropped, and the worker stayed
+    busy on reconnect attempts so the device could never sleep."""
+    body = _function_body(hwnet_src, "requestDash")
+    assert body is not None
+    assert "if (g_dashPending) return true;" in body, (
+        "a second snapshot request is queued instead of folded")
+    worker = _function_body(hwnet_src, "worker")
+    assert "g_dashPending = false" in worker, (
+        "the pending flag is never cleared; polling would stop for good")
+    # Flag before send. The worker clears the flag when it takes the job; a
+    # flag raised after the send can be raised after that clear, and then
+    # nothing is queued behind it — polling stops for good.
+    assert body.index("g_dashPending = true") < body.index("xQueueSend("), (
+        "the pending flag is raised after the job is queued (race with the "
+        "worker's clear)")
+    assert "g_dashPending = false" in body, (
+        "a failed queue insert leaves the flag raised")
+
+
+def test_polls_back_off_while_wifi_is_down_but_presses_still_try(hwnet_src):
+    connect = _function_body(hwnet_src, "connectWifi")
+    assert "retryAtMs = millis() + core::backoffDelay(" in connect, (
+        "a failed connect no longer schedules a backoff")
+    job = _function_body(hwnet_src, "runJob")
+    assert "if (job.isDash && wait > 0)" in job, (
+        "snapshot polls no longer fail fast during backoff — the worker "
+        "spends seconds per poll reconnecting and busy() never drops")
+
+
+def test_action_verdicts_have_their_own_queue(hwnet_src):
+    """A snapshot landing right after an action overwrote the action's
+    refusal (length-1 overwrite queue); the optimistic change then stayed on
+    screen with nobody to roll it back."""
+    deliver = _function_body(hwnet_src, "deliver")
+    assert deliver is not None, "deliver() is gone"
+    assert "xQueueSend(g_verdicts" in deliver
+    assert "xQueueOverwrite(g_replies" in deliver
+    take = _function_body(hwnet_src, "takeResult")
+    assert (take.index("xQueueReceive(g_verdicts") <
+            take.index("xQueueReceive(g_replies")), (
+        "verdicts must be drained before snapshots: they are what a press "
+        "is waiting on")
+
+
+def test_a_reused_lease_is_dropped_after_a_transport_failure(hwnet_src):
+    """The fast wake path reuses the last DHCP lease. If the router handed
+    that address to someone else meanwhile, WiFi.status() still says
+    connected and every request fails — for up to 24 h, the hint's TTL."""
+    job = _function_body(hwnet_src, "runJob")
+    at = job.find("code <= 0 && g_status.usedFastPath")
+    assert at != -1, "a transport failure no longer questions the reused lease"
+    assert "clearApHint()" in job[at:at + 300]
+
+
+def test_the_header_wording_comes_from_the_tested_core(hwui_src):
+    header = _function_body(hwui_src, "drawHeader")
+    assert "core::ageLabel(" in header
+    assert "Stand %lus alt" not in hwui_src, (
+        "the age wording is hand-rolled in the renderer again, where no test "
+        "can see what it says after a wake")
 
 
 def _function_body(src, name):

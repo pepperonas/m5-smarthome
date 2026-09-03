@@ -173,6 +173,34 @@ device polling constantly; they now count as failures and name their reason,
 and the diagnostics screen prints the configured target
 (`GW <host>:<port>  Token ja/FEHLT`) before the first request.
 
+**After a wake, `now - receivedAtMs` is uptime, not age.** The first attempt
+zeroed the stamp on the RTC-restored snapshot, which read as fresh for 8 s
+and then `Stand 12s alt` on forty-minute-old data — the future-stamp guard
+never fired because the stamp had been overwritten with the past. Restored
+snapshots carry `restoredFromSleep`; `core::ageLabel` says `Stand: vor dem
+Schlafen`. Pinned in core and against the shell.
+
+**The panel font is ASCII-only and skips umlauts silently** — `Küche` drew as
+`Kche`. `core::foldForDisplay` folds at parse time (`Kueche`), never grows a
+string, and command matching still accepts `küche`/`kueche`/`kuche`.
+
+**An outage filled the job queue with polls and kept the device awake.** Each
+poll queued a snapshot job that sat 4–12 s in `connectWifi()`; presses were
+dropped from the full queue while shown as done, and `busy()` never dropped,
+so the remote never slept. Polls coalesce to one pending job and fail fast
+during backoff; presses always try. ⚠️ Raise `g_dashPending` BEFORE the
+queue insert — the worker clears it on take, and a flag raised after that
+clear stops polling for good (pinned + mutation-probed).
+
+**Snapshots and verdicts no longer share one overwrite slot** — a snapshot
+landing on an unread refusal left the optimistic change on screen forever.
+Verdicts have their own queue, drained first.
+
+**The wire format is pinned from both ends.** `core::buildActionBody` is the
+only place JSON is built; `tools/tests/test_action_contract.py` feeds every
+literal from the firmware's `ACTION_BODY_CONTRACT` block to the gateway's
+real `actions.plan()`.
+
 **Press `d` before guessing.** The diagnostics screen reports link state, the
 device IP, the exact URL last requested, the last HTTP status or transport
 error, request/failure counts, whether a snapshot was ever parsed, free heap

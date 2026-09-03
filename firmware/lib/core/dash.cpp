@@ -10,6 +10,8 @@ void copyStr(char* dst, size_t cap, const char* src) {
     size_t n = strnlen(src, cap - 1);
     memcpy(dst, src, n);
     dst[n] = 0;
+    // Everything copied here ends up on the panel, whose font is ASCII-only.
+    foldForDisplay(dst);
 }
 
 // The gateway names failed sources in "err" and last-known ones in "old".
@@ -39,11 +41,66 @@ uint16_t bitsFrom(JsonArrayConst arr) {
 
 uint32_t ageMs(const Dash& d, uint32_t nowMs) {
     if (!d.valid) return 0;
-    // millis() restarts at zero after deep sleep, so a snapshot restored from
-    // RTC memory looks like it came from the future. Treat that as "old",
-    // never as "fresh" — guessing fresh is the dangerous direction.
-    if (nowMs < d.receivedAtMs) return kStaleAfterMs;
+    // millis() restarts at zero after deep sleep. A snapshot restored from
+    // RTC memory is flagged, and one that still carries its pre-sleep stamp
+    // looks like it came from the future. Both are "old", never "fresh" —
+    // guessing fresh is the dangerous direction, and "now minus receivedAt"
+    // after a restart is uptime, not age.
+    if (d.restoredFromSleep || nowMs < d.receivedAtMs) return kStaleAfterMs;
     return nowMs - d.receivedAtMs;
+}
+
+void markRestoredFromSleep(Dash& d) {
+    d.restoredFromSleep = true;
+}
+
+void ageLabel(const Dash& d, uint32_t nowMs, char* out, size_t cap) {
+    if (!d.valid) {
+        snprintf(out, cap, "warte auf Daten");
+    } else if (d.restoredFromSleep) {
+        // The clock cannot say how old this is; "Stand 12s alt" would be
+        // uptime dressed up as age. Say what is actually known.
+        snprintf(out, cap, "Stand: vor dem Schlafen");
+    } else if (isStale(d, nowMs)) {
+        snprintf(out, cap, "Stand %lus alt",
+                 (unsigned long)(ageMs(d, nowMs) / 1000));
+    } else {
+        out[0] = 0;
+    }
+}
+
+void foldForDisplay(char* s) {
+    unsigned char* r = reinterpret_cast<unsigned char*>(s);
+    unsigned char* w = r;
+    while (*r) {
+        const unsigned char c = *r;
+        if (c < 0x80) {
+            *w++ = *r++;
+            continue;
+        }
+        // Length of the UTF-8 sequence from its lead byte; a stray
+        // continuation byte counts as one so nothing is ever skipped past.
+        int len = (c & 0xE0) == 0xC0 ? 2 : (c & 0xF0) == 0xE0 ? 3
+                : (c & 0xF8) == 0xF0 ? 4 : 1;
+        const char* rep = "?";
+        if (c == 0xC3 && r[1]) {
+            switch (r[1]) {
+                case 0xA4: rep = "ae"; break;
+                case 0x84: rep = "Ae"; break;
+                case 0xB6: rep = "oe"; break;
+                case 0x96: rep = "Oe"; break;
+                case 0xBC: rep = "ue"; break;
+                case 0x9C: rep = "Ue"; break;
+                case 0x9F: rep = "ss"; break;
+                default: break;
+            }
+        }
+        for (int i = 0; i < len && *r; ++i) ++r;
+        // Every replacement is at most two bytes and replaces at least two,
+        // so the write cursor never overtakes the read cursor.
+        for (const char* q = rep; *q; ++q) *w++ = static_cast<unsigned char>(*q);
+    }
+    *w = 0;
 }
 
 bool isStale(const Dash& d, uint32_t nowMs) {

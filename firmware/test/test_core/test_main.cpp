@@ -43,6 +43,80 @@ static Dash liveDash(uint32_t nowMs = 1000) {
 
 // ---------------------------------------------------------------- dash ----
 
+// A snapshot restored from RTC memory after deep sleep predates the sleep by
+// at least the idle timeout and possibly by days. millis() has restarted, so
+// "now minus receivedAt" is uptime, not age — for the first 8 s that read as
+// FRESH and afterwards as "Stand 12s alt" when the truth was forty minutes.
+void test_a_snapshot_restored_from_sleep_is_stale_from_the_first_frame(void) {
+    Dash d = liveDash(5000);
+    markRestoredFromSleep(d);
+    TEST_ASSERT_TRUE(d.valid);                // still shown, never blanked
+    TEST_ASSERT_TRUE(isStale(d, 0));
+    TEST_ASSERT_TRUE(isStale(d, 300));
+    TEST_ASSERT_TRUE(isStale(d, 6000));       // inside the 8 s fresh window
+    TEST_ASSERT_TRUE(isStale(d, 60000));
+    // A real reply replaces it, flag and all.
+    Dash fresh = liveDash(400);
+    TEST_ASSERT_FALSE(fresh.restoredFromSleep);
+    TEST_ASSERT_FALSE(isStale(fresh, 500));
+}
+
+void test_the_age_label_never_reports_uptime_as_age(void) {
+    char buf[32];
+    Dash none;
+    ageLabel(none, 1000, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("warte auf Daten", buf);
+
+    Dash fresh = liveDash(500);
+    ageLabel(fresh, 900, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("", buf);        // nothing to confess
+    ageLabel(fresh, 500 + 9000, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("Stand 9s alt", buf);
+
+    Dash old = liveDash(5000);
+    markRestoredFromSleep(old);
+    ageLabel(old, 300, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("Stand: vor dem Schlafen", buf);
+    ageLabel(old, 120000, buf, sizeof(buf));   // two minutes awake, still true
+    TEST_ASSERT_EQUAL_STRING("Stand: vor dem Schlafen", buf);
+}
+
+// The panel font (Font0) has ASCII glyphs only. A UTF-8 umlaut is silently
+// skipped by the renderer: "Küche" drew as "Kche", "Mäßig bewölkt" fell
+// apart. Fold at parse time, where a host test can see it, and in the same
+// ASCII convention the rest of the UI already uses ("Raeume", "Helligkeit").
+void test_room_names_are_folded_for_the_ascii_font(void) {
+    Dash d = liveDash();
+    TEST_ASSERT_EQUAL_STRING("Kueche", d.hue.rooms[2].name);
+}
+
+void test_display_folding_covers_the_german_set(void) {
+    char s[] = "M\xC3\xA4\xC3\x9Fig bew\xC3\xB6lkt \xC3\x9C\xC3\x84\xC3\x96 \xC3\xA9";
+    foldForDisplay(s);
+    TEST_ASSERT_EQUAL_STRING("Maessig bewoelkt UeAeOe ?", s);
+}
+
+void test_display_folding_never_grows_a_string(void) {
+    // Every replacement is at most as long as the two-byte sequence it
+    // replaces, so folding in place cannot overflow a fixed buffer. Three-
+    // and four-byte sequences collapse to one '?'.
+    char s[] = "\xE2\x82\xAC 5 \xF0\x9F\x92\xA1";   // "€ 5 💡"
+    const size_t before = strlen(s);
+    foldForDisplay(s);
+    TEST_ASSERT_TRUE(strlen(s) <= before);
+    TEST_ASSERT_EQUAL_STRING("? 5 ?", s);
+}
+
+void test_folded_names_still_match_typed_umlauts(void) {
+    Dash d = liveDash();
+    for (const char* s : {"k\xC3\xBC" "che aus", "kueche aus", "kuche aus"}) {
+        Intent i = parseCommand(s, d);
+        TEST_ASSERT_TRUE_MESSAGE(i.valid, s);
+        TEST_ASSERT_EQUAL(83, i.arg);
+    }
+}
+
+
 void test_parses_a_real_gateway_snapshot(void) {
     Dash d = liveDash();
     TEST_ASSERT_TRUE(d.valid);
@@ -381,6 +455,110 @@ void test_bit_timing_constants(void) {
     TEST_ASSERT_EQUAL(560, ir::necSpaceFor(false));
 }
 
+
+// ------------------------------------------------------- action bodies ----
+
+static Intent intent(const char* target, const char* action) {
+    Intent i;
+    i.valid = true;
+    strncpy(i.target, target, sizeof(i.target) - 1);
+    strncpy(i.action, action, sizeof(i.action) - 1);
+    return i;
+}
+
+// What the device puts on the wire for each kind of intent. The gateway
+// parses these with actions.plan(); a drifted key name there is a 400 on
+// every press, which happened once (a named value went into the wrong
+// field). tools/tests/test_action_contract.py feeds every literal in the
+// block below to the real gateway code, so the two ends cannot drift apart
+// unnoticed.
+void test_action_bodies_match_the_gateway_contract(void) {
+    char out[192];
+    Intent i;
+
+    // ACTION_BODY_CONTRACT_BEGIN
+    i = intent("hue", "on"); i.arg = 81; i.hasArg = true;
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"hue\",\"action\":\"on\",\"group\":81}", out);
+
+    i = intent("hue", "bri"); i.arg = 83; i.hasArg = true; i.arg2 = 120; i.hasArg2 = true;
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"hue\",\"action\":\"bri\",\"group\":83,\"bri\":120}", out);
+
+    i = intent("lw", "off");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"lw\",\"action\":\"off\"}", out);
+
+    i = intent("lw", "bri"); i.arg2 = 200; i.hasArg2 = true;
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"lw\",\"action\":\"bri\",\"bri\":200}", out);
+
+    i = intent("lw", "effect"); strcpy(i.name, "rainbow");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"lw\",\"action\":\"effect\",\"effect\":\"rainbow\"}", out);
+
+    i = intent("yam", "vol"); i.arg = -2; i.hasArg = true;
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"yam\",\"action\":\"vol\",\"step\":-2}", out);
+
+    i = intent("yam", "mute");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"yam\",\"action\":\"mute\"}", out);
+
+    i = intent("yam", "input"); strcpy(i.name, "Spotify");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"yam\",\"action\":\"input\",\"input\":\"Spotify\"}", out);
+
+    i = intent("tf", "power");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"tf\",\"action\":\"power\"}", out);
+
+    i = intent("tf", "vol"); i.arg = 3; i.hasArg = true;
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"tf\",\"action\":\"vol\",\"step\":3}", out);
+
+    i = intent("tf", "input"); strcpy(i.name, "AUX");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"tf\",\"action\":\"input\",\"input\":\"AUX\"}", out);
+
+    i = intent("disco", "on");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"disco\",\"action\":\"on\"}", out);
+
+    i = intent("disco", "mode"); strcpy(i.name, "strobe");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"disco\",\"action\":\"mode\",\"mode\":\"strobe\"}", out);
+
+    i = intent("fog", "off");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"fog\",\"action\":\"off\"}", out);
+
+    i = intent("fog", "on");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"fog\",\"action\":\"on\",\"confirm\":true}", out);
+
+    i = intent("macro", "goodnight");
+    TEST_ASSERT_TRUE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("{\"target\":\"macro\",\"action\":\"goodnight\"}", out);
+    // ACTION_BODY_CONTRACT_END
+}
+
+void test_an_invalid_intent_produces_no_body(void) {
+    char out[192] = "stale";
+    Intent i;                              // valid == false
+    TEST_ASSERT_FALSE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("", out);
+}
+
+void test_a_body_that_would_not_fit_is_refused_not_truncated(void) {
+    // A truncated JSON object is a 400 at best; at worst it parses as a
+    // different request. The builder must say no rather than send a stump.
+    char out[24];
+    Intent i = intent("disco", "mode"); strcpy(i.name, "strobe");
+    TEST_ASSERT_FALSE(buildActionBody(i, out, sizeof(out)));
+    TEST_ASSERT_EQUAL_STRING("", out);
+}
+
 // ------------------------------------------------------------- netplan ----
 
 void test_polling_is_fast_while_in_use_and_slow_when_idle(void) {
@@ -546,6 +724,15 @@ int main(int, char**) {
     RUN_TEST(test_a_long_room_name_is_truncated_not_overflowed);
     RUN_TEST(test_a_snapshot_from_before_a_reboot_counts_as_stale);
     RUN_TEST(test_freshness_window);
+    RUN_TEST(test_a_snapshot_restored_from_sleep_is_stale_from_the_first_frame);
+    RUN_TEST(test_the_age_label_never_reports_uptime_as_age);
+    RUN_TEST(test_room_names_are_folded_for_the_ascii_font);
+    RUN_TEST(test_display_folding_covers_the_german_set);
+    RUN_TEST(test_display_folding_never_grows_a_string);
+    RUN_TEST(test_folded_names_still_match_typed_umlauts);
+    RUN_TEST(test_action_bodies_match_the_gateway_contract);
+    RUN_TEST(test_an_invalid_intent_produces_no_body);
+    RUN_TEST(test_a_body_that_would_not_fit_is_refused_not_truncated);
 
     RUN_TEST(test_a_press_shows_immediately);
     RUN_TEST(test_a_rejected_request_rolls_the_screen_back);

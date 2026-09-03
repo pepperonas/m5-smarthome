@@ -8,6 +8,8 @@
 // intent. It never performs anything.
 #pragma once
 
+#include <cstddef>
+
 #include <cstdint>
 
 #include "dash.h"
@@ -35,6 +37,13 @@ struct Intent {
 // Parse one typed line. `d` supplies live room names so "kueche an" works
 // without hard-coding the house.
 Intent parseCommand(const char* input, const Dash& d);
+
+// Serialise an intent into the JSON the gateway's /api/act expects. Returns
+// false — and an empty string — for an invalid intent or one that would not
+// fit: a truncated object is a 400 at best and a different request at worst.
+// The key names are the contract with gateway/m5gw/actions.py; the test
+// block ACTION_BODY_CONTRACT pins them from both sides.
+bool buildActionBody(const Intent& in, char* out, size_t cap);
 
 // Suggestion for the current input, or nullptr. Used for inline completion.
 const char* completeCommand(const char* input, const Dash& d, char* buf,

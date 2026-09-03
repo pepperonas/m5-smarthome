@@ -197,6 +197,59 @@ and bumped no counter. The diagnostics screen then showed `Abrufe 0` on a
 device that was polling constantly. Every abandoned request now counts as a
 failed fetch and names its reason.
 
+### After a wake, "now minus receivedAt" is uptime, not age
+
+The snapshot restored from RTC memory predates the sleep by at least the idle
+timeout, often by hours. `millis()` has restarted, and the first attempt at
+ageing it set `receivedAtMs = 0` — which made the age *grow from zero*: fresh
+for the 8-second window, then `Stand 12s alt` on forty-minute-old numbers.
+The guard against a stamp from the future never fired because the stamp had
+been overwritten with the past.
+
+A restored snapshot now carries a flag; `ageMs()` reports it stale from the
+first frame and the header says `Stand: vor dem Schlafen`, which is what is
+actually known. The wording comes from `core::ageLabel`, where a host test
+can read it.
+
+### The panel font is ASCII-only, and it fails silently
+
+Font0 has no glyph for `ü`; the renderer skips the code point and moves on.
+`Küche` drew as `Kche`, the weather line fell apart around `ä`/`ö`/`ß`.
+Strings are folded to the house's ASCII convention at parse time
+(`core::foldForDisplay`, `Kueche`), where a test sees it; the fold never
+grows a string, so it runs in place on the fixed buffers.
+
+### An outage filled the job queue with polls — and kept the device awake
+
+Every poll enqueued a snapshot job. With the radio down each one sat in
+`connectWifi()` for 4–12 s, the poller kept adding more, presses were dropped
+from a full queue while the screen showed them as done, and `busy()` never
+dropped — so `shouldSleep()` never fired. A dead Wi-Fi turned the remote into
+a heater until the battery was empty.
+
+Polls now coalesce to one pending job, and after a failed association they
+fail fast until a backoff deadline (`core::backoffDelay`) while presses still
+get their attempt. ⚠️ **Raise the pending flag before the queue insert.** The
+worker clears it when it takes the job; a flag raised after the insert can be
+raised after that clear, leaving it up with nothing behind it — and polling
+stops for good. Pinned.
+
+### A length-1 overwrite queue loses the reply that matters
+
+Snapshots and action verdicts shared one overwrite slot. The UI task drains
+it every 5 ms, but a frame push takes longer than a fast gateway reply, so a
+snapshot could land on top of an unread refusal: the overlay stayed on screen
+and nothing ever rolled it back. Verdicts are three words and now have their
+own queue, as deep as the job queue, drained before snapshots.
+
+### A reused DHCP lease can be someone else's now
+
+The fast wake path reconnects with the stored BSSID, channel *and* the last
+lease, skipping DHCP. If the router reassigned that address while the device
+slept, `WiFi.status()` still reports connected and every request fails — for
+up to 24 h, the hint's TTL. A transport failure on a fast-path link now drops
+the hint and the association, so the next attempt asks DHCP.
+
 ---
 
 ## Testing
@@ -209,6 +262,17 @@ thin adapter, verified on the device" — and no device was attached.
 
 If a layer genuinely cannot be unit-tested, pin its invariants against the
 source, and get it onto hardware before believing it works.
+
+### Pin an interface from both ends, or it drifts from one
+
+The device serialises intents; the gateway parses them. Neither can run the
+other's code, and the parameter names in between (`group`, `bri`, `step`,
+`input`, `effect`, `mode`, `confirm`) were checked by nobody. Once a named
+value went into the wrong field and every input/effect/mode press became a
+400 the device could not explain. The wire format now lives in
+`core::buildActionBody`; its expected literals sit in a marked block of the
+firmware tests, and `tools/tests/test_action_contract.py` lifts every one of
+them out and feeds it to the real `actions.plan()`.
 
 ### A test you have never seen fail is not an assurance
 

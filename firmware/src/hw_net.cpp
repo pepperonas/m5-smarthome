@@ -32,11 +32,25 @@ struct Reply {
     char body[kMaxBody];
 };
 
+// An action's verdict is three words; it does not need a 1.6 KB slot, and it
+// must never be lost. Snapshot replies go through a length-1 overwrite queue
+// (only the newest matters), verdicts through their own queue as deep as the
+// job queue, so a snapshot landing right after an action cannot overwrite
+// the action's refusal — which would have left an optimistic change on
+// screen with nobody to roll it back.
+struct Verdict {
+    bool ok;
+    uint32_t overlayToken;
+    int status;
+};
+
 store::Config g_cfg;
 QueueHandle_t g_jobs = nullptr;
-QueueHandle_t g_replies = nullptr;
+QueueHandle_t g_replies = nullptr;       // snapshots, length 1, overwrite
+QueueHandle_t g_verdicts = nullptr;      // action results, length kQueueLen
 TaskHandle_t g_task = nullptr;
 volatile bool g_busy = false;
+volatile bool g_dashPending = false;     // a snapshot job sits in g_jobs
 bool g_rediscovered = false;
 Status g_status;
 Reply g_lastReply;
@@ -89,6 +103,10 @@ bool connectWifi() {
         }
         g_status.link = LinkState::Failed;
         ++g_status.failures;
+        // Losing Wi-Fi is a normal state: back off instead of spending 4-12 s
+        // in every poll trying again. Without this the poller kept the
+        // worker busy around the clock and the device could never sleep.
+        g_status.retryAtMs = millis() + core::backoffDelay(g_status.failures);
         return false;
     }
 
@@ -141,6 +159,20 @@ void buildUrl(char* out, size_t cap, const char* path) {
     snprintf(out, cap, "http://%s:%u%s", g_cfg.host, (unsigned)g_cfg.port, path);
 }
 
+// Hand a finished job back to the UI task. Snapshots overwrite (newest wins);
+// verdicts queue up (none may be lost).
+void deliver(const Reply& r) {
+    if (r.isDash) {
+        xQueueOverwrite(g_replies, &r);
+        return;
+    }
+    Verdict v;
+    v.ok = r.ok;
+    v.overlayToken = r.overlayToken;
+    v.status = r.status;
+    xQueueSend(g_verdicts, &v, 0);
+}
+
 void runJob(const Job& job) {
     // Static, not on the stack: this struct is ~1.6 KB and the worker stack
     // is a few KB shared with the whole HTTP path. Only one job runs at a
@@ -157,20 +189,35 @@ void runJob(const Job& job) {
     // The diagnostics screen then showed "Abrufe 0" on a device that was
     // polling constantly, and the one screen built to end the guessing had
     // nothing to say about the most likely failures.
-    if (WiFi.status() != WL_CONNECTED && !connectWifi()) {
-        ++g_status.requests;
-        ++g_status.failed;
-        snprintf(g_status.lastError, sizeof(g_status.lastError),
-                 "WLAN-Verbindung fehlgeschlagen");
-        xQueueOverwrite(g_replies, &r);
-        return;
+    if (WiFi.status() != WL_CONNECTED) {
+        // A poll during backoff fails at once rather than spending seconds
+        // in connectWifi(): the queue drains, busy() drops, and the device
+        // can still go to sleep with the radio dead. A press is intent and
+        // always gets an attempt.
+        const int32_t wait = (int32_t)(g_status.retryAtMs - millis());
+        if (job.isDash && wait > 0) {
+            ++g_status.requests;
+            ++g_status.failed;
+            snprintf(g_status.lastError, sizeof(g_status.lastError),
+                     "WLAN aus, Pause %ld s", (long)((wait + 999) / 1000));
+            deliver(r);
+            return;
+        }
+        if (!connectWifi()) {
+            ++g_status.requests;
+            ++g_status.failed;
+            snprintf(g_status.lastError, sizeof(g_status.lastError),
+                     "WLAN-Verbindung fehlgeschlagen");
+            deliver(r);
+            return;
+        }
     }
     if (g_cfg.host[0] == 0 && !discoverGateway()) {
         ++g_status.requests;
         ++g_status.failed;
         snprintf(g_status.lastError, sizeof(g_status.lastError),
                  "Gateway nicht gefunden (mDNS)");
-        xQueueOverwrite(g_replies, &r);
+        deliver(r);
         return;
     }
 
@@ -193,7 +240,7 @@ void runJob(const Job& job) {
     if (!http.begin(client, url)) {
         ++g_status.failed;
         snprintf(g_status.lastError, sizeof(g_status.lastError), "begin() failed");
-        xQueueOverwrite(g_replies, &r);
+        deliver(r);
         return;
     }
     char auth[80];
@@ -234,19 +281,33 @@ void runJob(const Job& job) {
     g_status.stackHighWater = uxTaskGetStackHighWaterMark(nullptr);
     http.end();
 
+    // A transport failure on a link that reused its last DHCP lease can be
+    // the lease itself: the router may have handed that address to someone
+    // else while we slept, and WiFi.status() says "connected" regardless.
+    // Drop the hint and the association so the next attempt asks DHCP;
+    // a stale hint costs more than it saves.
+    if (code <= 0 && g_status.usedFastPath) {
+        store::clearApHint();
+        g_status.usedFastPath = false;
+        WiFi.disconnect(false, false);
+        WiFi.config(IPAddress((uint32_t)0), IPAddress((uint32_t)0),
+                    IPAddress((uint32_t)0));
+    }
+
     // A transport failure (not an HTTP error) can mean the gateway moved.
     // Re-discover once and retry, rather than staying broken until someone
     // re-runs setup.
     if (code <= 0 && !g_rediscovered) {
         g_rediscovered = true;
         if (discoverGateway()) {
-            xQueueSend(g_jobs, &job, 0);      // one retry at the new address
-            return;
+            if (job.isDash) g_dashPending = true;         // same order as above
+            if (xQueueSend(g_jobs, &job, 0) == pdTRUE) return;   // one retry
+            if (job.isDash) g_dashPending = false;
         }
     }
     if (code > 0) g_rediscovered = false;
 
-    xQueueOverwrite(g_replies, &r);
+    deliver(r);
 }
 
 void worker(void*) {
@@ -255,6 +316,9 @@ void worker(void*) {
     for (;;) {
         if (xQueueReceive(g_jobs, &job, portMAX_DELAY) == pdTRUE) {
             g_busy = true;
+            // Cleared before the job runs, so a request that arrives while
+            // this one is in flight is queued rather than swallowed.
+            if (job.isDash) g_dashPending = false;
             runJob(job);
             g_busy = false;
         }
@@ -271,6 +335,7 @@ void begin(const store::Config& cfg) {
     if (g_task) return;
     g_jobs = xQueueCreate(kQueueLen, sizeof(Job));
     g_replies = xQueueCreate(1, sizeof(Reply));   // overwrite semantics
+    g_verdicts = xQueueCreate(kQueueLen, sizeof(Verdict));
     g_status.link = LinkState::Connecting;
     // Pinned to core 0 so the UI task on core 1 keeps its frame time even
     // while TLS-free HTTP and Wi-Fi housekeeping run.
@@ -281,15 +346,24 @@ void begin(const store::Config& cfg) {
 
 bool requestDash() {
     if (!g_jobs) return false;
+    if (g_dashPending) return true;          // fold into the one already waiting
     Job j;
     j.isDash = true;
     j.overlayToken = 0;
     j.body[0] = 0;
-    return xQueueSend(g_jobs, &j, 0) == pdTRUE;
+    // Flag first, then queue: the worker clears the flag when it takes the
+    // job, and if it took it between a send and a later set, the flag would
+    // stay up with nothing behind it — and polling would stop for good.
+    g_dashPending = true;
+    if (xQueueSend(g_jobs, &j, 0) != pdTRUE) {
+        g_dashPending = false;
+        return false;
+    }
+    return true;
 }
 
-uint32_t requestAction(const char* body, uint32_t overlayToken) {
-    if (!g_jobs || !body) return 0;
+bool requestAction(const char* body, uint32_t overlayToken) {
+    if (!g_jobs || !body) return false;
     Job j;
     j.isDash = false;
     j.overlayToken = overlayToken;
@@ -298,13 +372,23 @@ uint32_t requestAction(const char* body, uint32_t overlayToken) {
     // Queued, not sent: a press during a reconnect is accepted and goes out
     // as soon as the link is up. Swallowing input is what makes a remote
     // feel slower than it is.
-    return xQueueSend(g_jobs, &j, 0) == pdTRUE ? overlayToken : 0;
+    return xQueueSend(g_jobs, &j, 0) == pdTRUE;
 }
 
 bool takeResult(Result& out) {
     if (!g_replies) return false;
+    Verdict v;
+    if (g_verdicts && xQueueReceive(g_verdicts, &v, 0) == pdTRUE) {
+        out.isDash = false;
+        out.ok = v.ok;
+        out.overlayToken = v.overlayToken;
+        out.body = nullptr;
+        out.len = 0;
+        out.status = v.status;
+        return true;
+    }
     if (xQueueReceive(g_replies, &g_lastReply, 0) != pdTRUE) return false;
-    out.isDash = g_lastReply.isDash;
+    out.isDash = true;
     out.ok = g_lastReply.ok;
     out.overlayToken = g_lastReply.overlayToken;
     out.body = g_lastReply.body;

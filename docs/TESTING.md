@@ -150,3 +150,12 @@ whose own failure is invisible: a run killed mid-mutation leaves a broken
 tree that looks like ordinary uncommitted work. `tools/tests/test_mutate.py`
 pins the crash-recovery journal — in particular that it is written *before*
 the source file changes, since the reverse order recovers nothing.
+
+## The wire contract is pinned from both ends
+
+`test_action_bodies_match_the_gateway_contract` (firmware, host) fixes the
+exact JSON the device sends for every kind of intent. The literals sit
+between `ACTION_BODY_CONTRACT_BEGIN` and `_END`; `tools/tests/test_action_contract.py`
+extracts them from the C++ source and runs each through the gateway's
+`actions.plan()`. Change a key name on either side and the other side's test
+goes red — that is the point.

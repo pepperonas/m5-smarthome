@@ -54,15 +54,9 @@ void drawHeader(const core::Dash& d, uint32_t nowMs, const net::Status& link,
     // — dimmed and labelled — because blanking it would make every Wi-Fi
     // hiccup look like a dead house.
     char mid[28];
-    if (!d.valid) {
-        snprintf(mid, sizeof(mid), "warte auf Daten");
-    } else if (core::isStale(d, nowMs)) {
-        snprintf(mid, sizeof(mid), "Stand %lus alt",
-                 (unsigned long)(core::ageMs(d, nowMs) / 1000));
-    } else if (unconfirmed) {
+    core::ageLabel(d, nowMs, mid, sizeof(mid));   // wording is host-tested
+    if (!mid[0] && unconfirmed) {
         snprintf(mid, sizeof(mid), "IR unbestaetigt");
-    } else {
-        mid[0] = 0;
     }
     if (mid[0]) {
         g_canvas->setTextColor(core::isStale(d, nowMs) ? kDim : kOn, kHeadBg);

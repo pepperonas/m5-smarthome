@@ -196,6 +196,22 @@ A press that arrives *during* a reconnect is queued, not dropped. Nothing
 feels slower than a remote that swallows input because it is "still
 connecting".
 
+Three details of that queue exist because their absence was a bug:
+
+- **Snapshot polls coalesce.** At most one snapshot request waits in the job
+  queue; a second is folded into it. Without this an outage filled the queue
+  with polls, presses were dropped silently, and the worker never stopped
+  reconnecting — so `busy()` never dropped and the device could not sleep.
+- **Polls back off, presses always try.** After a failed association the
+  worker sets a retry time (`core::backoffDelay`); snapshot jobs fail at once
+  until then, a press still gets its attempt. A dead radio must not keep the
+  device awake.
+- **Verdicts have their own queue.** The newest snapshot is all that matters,
+  so snapshots use a length-1 overwrite slot. An action's verdict must never
+  be lost — a snapshot landing right after a refusal used to overwrite it and
+  the optimistic change stayed on screen with nobody to roll it back — so
+  verdicts queue separately, as deep as the job queue, and drain first.
+
 ### Optimistic rendering
 
 A press changes the screen now; the request follows behind it.

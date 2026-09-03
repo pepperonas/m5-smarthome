@@ -304,4 +304,49 @@ const char* completeCommand(const char* input, const Dash& d, char* buf,
     return nullptr;
 }
 
+
+bool buildActionBody(const Intent& in, char* out, size_t cap) {
+    if (!in.valid || cap == 0) {
+        if (cap) out[0] = 0;
+        return false;
+    }
+    int n;
+    if (strcmp(in.target, "macro") == 0) {
+        n = snprintf(out, cap, "{\"target\":\"macro\",\"action\":\"%s\"}",
+                     in.action);
+    } else if (strcmp(in.target, "fog") == 0 && strcmp(in.action, "on") == 0) {
+        // The gateway refuses this without confirm:true. The device only
+        // builds it after the user answered the on-screen prompt.
+        n = snprintf(out, cap,
+                     "{\"target\":\"fog\",\"action\":\"on\",\"confirm\":true}");
+    } else if (in.name[0]) {
+        // input / effect / mode take one named value; its key is the
+        // action's own name.
+        n = snprintf(out, cap, "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":\"%s\"}",
+                     in.target, in.action, in.action, in.name);
+    } else if (in.hasArg2) {
+        const char* second = strcmp(in.action, "bri") == 0 ? "bri" : "value";
+        if (in.hasArg) {
+            n = snprintf(out, cap,
+                         "{\"target\":\"%s\",\"action\":\"%s\",\"group\":%d,\"%s\":%d}",
+                         in.target, in.action, in.arg, second, in.arg2);
+        } else {
+            n = snprintf(out, cap, "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":%d}",
+                         in.target, in.action, second, in.arg2);
+        }
+    } else if (in.hasArg) {
+        const char* key = strcmp(in.target, "hue") == 0 ? "group" : "step";
+        n = snprintf(out, cap, "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":%d}",
+                     in.target, in.action, key, in.arg);
+    } else {
+        n = snprintf(out, cap, "{\"target\":\"%s\",\"action\":\"%s\"}",
+                     in.target, in.action);
+    }
+    if (n < 0 || (size_t)n >= cap) {
+        out[0] = 0;
+        return false;
+    }
+    return true;
+}
+
 }  // namespace core

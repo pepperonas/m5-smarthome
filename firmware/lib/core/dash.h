@@ -118,6 +118,10 @@ struct Dash {
     uint16_t stale = 0;         // gateway served a last-known value
     bool valid = false;         // have we ever had a snapshot at all?
     uint32_t receivedAtMs = 0;  // device uptime when this arrived
+    // Restored from RTC memory after deep sleep. millis() has restarted, so
+    // receivedAtMs says nothing about age any more: the data predates the
+    // sleep by at least the idle timeout and possibly by days.
+    bool restoredFromSleep = false;
 
     bool sourceOk(SourceBit b) const { return !(missing & b); }
     bool sourceStale(SourceBit b) const { return (stale & b) != 0; }
@@ -126,9 +130,26 @@ struct Dash {
 // True when the whole snapshot is old enough that the UI should say so.
 bool isStale(const Dash& d, uint32_t nowMs);
 
-// Age in milliseconds, saturating at 0 for a snapshot from the future
-// (which happens across a sleep/wake boundary when millis() restarts).
+// Age in milliseconds. A snapshot from the future (millis() restarted across
+// a sleep) and one flagged restoredFromSleep both report kStaleAfterMs:
+// "old", never "fresh" — guessing fresh is the dangerous direction.
 uint32_t ageMs(const Dash& d, uint32_t nowMs);
+
+// Mark a snapshot pulled back out of RTC memory after a wake. It stays on
+// screen (blanking it would make every wake look like a dead house) but is
+// stale from the first frame, whatever the freshly restarted clock says.
+void markRestoredFromSleep(Dash& d);
+
+// The header's honesty line: "" when there is nothing to confess, otherwise
+// what the user needs to know about how current the numbers are. Lives here
+// rather than in the renderer so a host test can read every wording.
+void ageLabel(const Dash& d, uint32_t nowMs, char* out, size_t cap);
+
+// Replace UTF-8 umlauts with their ASCII digraphs in place (ä→ae, ß→ss …),
+// and any other non-ASCII sequence with '?'. The panel font has ASCII glyphs
+// only and silently skips everything else, so "Küche" drew as "Kche". Never
+// grows the string.
+void foldForDisplay(char* s);
 
 // Parse a gateway snapshot. Returns false and leaves `out` untouched if the
 // payload is unusable — a bad reply must never destroy the last good state.

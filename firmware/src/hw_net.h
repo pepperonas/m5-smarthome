@@ -35,6 +35,11 @@ struct Status {
     uint32_t freeHeap = 0;
     uint32_t stackHighWater = 0; // words left on the worker stack
 
+    // Wi-Fi is down and the worker is holding off reconnect attempts until
+    // this uptime, per core::backoffDelay. Snapshot polls fail fast meanwhile
+    // (so the device can still fall asleep); presses always try.
+    uint32_t retryAtMs = 0;
+
     // The configured target, so the diagnostics screen can show where the
     // next request WILL go. A stale or empty host in NVS is otherwise
     // invisible: it produces no URL, no HTTP status and no error — just a
@@ -47,12 +52,16 @@ struct Status {
 // Starts the worker task. Safe to call once from setup().
 void begin(const store::Config& cfg);
 
-// Ask for a fresh snapshot. Non-blocking; returns false if one is in flight.
+// Ask for a fresh snapshot. Non-blocking. At most one snapshot request waits
+// in the queue at a time: a second one is folded into it, so a poller that
+// keeps asking during an outage cannot fill the queue and crowd out presses.
+// Returns true when a request is pending afterwards (queued now or already).
 bool requestDash();
 
-// Queue a write action. `body` is JSON. Returns a token used to match the
-// reply, or 0 if the queue is full. Never blocks.
-uint32_t requestAction(const char* body, uint32_t overlayToken);
+// Queue a write action. `body` is JSON. Returns false if the queue is full —
+// the caller must roll the optimistic overlay back then, or the screen keeps
+// showing a change that was never sent. Never blocks.
+bool requestAction(const char* body, uint32_t overlayToken);
 
 // Poll for results from the UI task.
 struct Result {

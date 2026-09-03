@@ -162,42 +162,18 @@ void sendIntent(const core::Intent& in, bool viaIr, uint32_t nowMs) {
         return;                       // nothing to ask, nothing to confirm
     }
 
+    // The wire format lives in core::buildActionBody, where a host test pins
+    // it against the gateway's parser. Building it here once sent a named
+    // value in the wrong field and turned every input/effect/mode press
+    // into a 400 that nothing on the device could explain.
     char body[192];
-    if (strcmp(in.target, "macro") == 0) {
-        snprintf(body, sizeof(body),
-                 "{\"target\":\"macro\",\"action\":\"%s\"}", in.action);
-    } else if (strcmp(in.target, "fog") == 0 && strcmp(in.action, "on") == 0) {
-        // The gateway refuses this without confirm:true. We only get here
-        // after the user answered the on-screen prompt.
-        snprintf(body, sizeof(body),
-                 "{\"target\":\"fog\",\"action\":\"on\",\"confirm\":true}");
-    } else if (in.name[0]) {
-        // input / effect / mode all take a single named value, and the
-        // parameter key is the action's own name.
-        snprintf(body, sizeof(body),
-                 "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":\"%s\"}",
-                 in.target, in.action, in.action, in.name);
-    } else if (in.hasArg2) {
-        const char* second = strcmp(in.action, "bri") == 0 ? "bri" : "value";
-        if (in.hasArg) {
-            snprintf(body, sizeof(body),
-                     "{\"target\":\"%s\",\"action\":\"%s\",\"group\":%d,\"%s\":%d}",
-                     in.target, in.action, in.arg, second, in.arg2);
-        } else {
-            snprintf(body, sizeof(body),
-                     "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":%d}",
-                     in.target, in.action, second, in.arg2);
-        }
-    } else if (in.hasArg) {
-        const char* key = strcmp(in.target, "hue") == 0 ? "group" : "step";
-        snprintf(body, sizeof(body),
-                 "{\"target\":\"%s\",\"action\":\"%s\",\"%s\":%d}",
-                 in.target, in.action, key, in.arg);
-    } else {
-        snprintf(body, sizeof(body), "{\"target\":\"%s\",\"action\":\"%s\"}",
-                 in.target, in.action);
+    if (!core::buildActionBody(in, body, sizeof(body)) ||
+        !net::requestAction(body, token)) {
+        // Not sent, so it must not stay on screen as if it had been. A full
+        // queue is the realistic case: presses pile up during a reconnect.
+        g_overlays.reject(token);
+        core::toast(g_ui, "nicht gesendet", nowMs);
     }
-    net::requestAction(body, token);
 }
 
 // --- results --------------------------------------------------------------
@@ -217,10 +193,12 @@ void pumpNetwork(uint32_t nowMs) {
                 // A reply that will not parse is dropped on purpose: the last
                 // good snapshot stays on screen, ageing visibly.
             }
-        } else if (!r.ok && r.overlayToken) {
+        } else if (!r.ok) {
             // The house refused or never answered. Roll the screen back and
-            // say so, rather than leaving a lie on the display.
-            g_overlays.reject(r.overlayToken);
+            // say so, rather than leaving a lie on the display. Actions
+            // without an overlay (an input change, say) still get the toast:
+            // a press that fails silently reads as a dead key.
+            if (r.overlayToken) g_overlays.reject(r.overlayToken);
             core::toast(g_ui, r.status == 409 ? "abgelehnt" : "fehlgeschlagen",
                         nowMs);
             g_needRedraw = true;
@@ -390,8 +368,11 @@ void setup() {
     size_t cachedLen = 0;
     if (fromSleep && store::loadSnapshot(cached, sizeof(cached), cachedLen)) {
         core::parseDash(cached, cachedLen, g_dash, 0);
-        // Age it deliberately: this data predates the sleep.
-        g_dash.receivedAtMs = 0;
+        // This data predates the sleep, and millis() has just restarted:
+        // zeroing receivedAtMs (the first attempt here) made "now minus
+        // receivedAt" read as uptime — fresh for 8 s, then "Stand 12s alt"
+        // on data that was forty minutes old. The flag says what is true.
+        core::markRestoredFromSleep(g_dash);
     }
     ui::setBacklight(core::kBrightFull);
     ui::draw(g_ui, g_dash, millis(), net::status(), batteryPercent(), false);
