@@ -32,6 +32,7 @@
 #include "keymap.h"
 #include "netplan.h"
 #include "optimistic.h"
+#include "reset_gesture.h"
 #include "ui_state.h"
 
 // A personal build may carry credentials so the device joins the network on
@@ -46,6 +47,7 @@ namespace {
 core::Dash g_dash;
 core::UiState g_ui;
 core::OverlayStore g_overlays;
+core::ResetGesture g_reset;
 store::Config g_cfg;
 
 uint32_t g_lastKeyMs = 0;
@@ -314,29 +316,13 @@ void setup() {
     const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     const bool fromSleep = cause == ESP_SLEEP_WAKEUP_EXT0;
 
-    // Reset gesture, promised in the README: hold a key through power-on and
-    // the stored credentials are dropped. Checked before load() so a wrong
-    // token cannot lock you out of a device with no other input path.
-    M5Cardputer.update();
-    if (!fromSleep && M5Cardputer.Keyboard.isPressed()) {
-        M5Cardputer.Display.fillScreen(TFT_BLACK);
-        M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-        M5Cardputer.Display.drawString("Taste halten fuer Reset...", 6, 40);
-        // Long enough that a key pressed while plugging in does not wipe the
-        // configuration by accident.
-        uint32_t held = 0;
-        while (held < 2000) {
-            delay(50);
-            M5Cardputer.update();
-            if (!M5Cardputer.Keyboard.isPressed()) break;
-            held += 50;
-        }
-        if (held >= 2000) {
-            store::erase();
-            M5Cardputer.Display.drawString("Zugangsdaten geloescht.  ", 6, 60);
-            delay(1200);
-        }
-    }
+    // Reset gesture: hold any key for two seconds within the first three
+    // seconds after a cold boot. Polled from loop(), not checked once here —
+    // on the ADV the TCA8418 reader flushes its event FIFO in begin(), so a
+    // key held through power-on is invisible to isPressed() and the old
+    // one-shot check could never fire. Disarmed after a wake: the key that
+    // woke the device must not be able to wipe it.
+    g_reset.begin(!fromSleep, millis());
 
 #if M5SH_LOCAL_SECRETS
     // The compiled-in credentials apply exactly once per *distinct value
@@ -394,6 +380,33 @@ void setup() {
 void loop() {
     M5Cardputer.update();
     const uint32_t now = millis();
+
+    switch (g_reset.feed(M5Cardputer.Keyboard.isPressed() > 0, now)) {
+        case core::ResetGesture::State::Holding: {
+            static uint32_t shownSec = 0;
+            const uint32_t sec = (g_reset.remainingMs(now) + 999) / 1000;
+            if (sec != shownSec) {          // one redraw per second, not per loop
+                shownSec = sec;
+                char b[32];
+                snprintf(b, sizeof(b), "Halten: Reset in %lu s",
+                         (unsigned long)sec);
+                core::toast(g_ui, b, now);
+                g_needRedraw = true;
+            }
+            break;
+        }
+        case core::ResetGesture::State::Fire:
+            store::erase();
+            M5Cardputer.Display.fillScreen(TFT_BLACK);
+            M5Cardputer.Display.setTextColor(TFT_WHITE, TFT_BLACK);
+            M5Cardputer.Display.drawString("Zugangsdaten geloescht.", 6, 40);
+            M5Cardputer.Display.drawString("Neustart...", 6, 60);
+            delay(1200);
+            ESP.restart();
+            return;
+        default:
+            break;
+    }
 
     core::Key k;
     if (readKey(k)) {

@@ -240,6 +240,22 @@ def test_named_changes_are_optimistic_too(main_src):
             f"{field} is no longer claimed optimistically")
 
 
+def test_the_reset_gesture_is_polled_not_checked_once(main_src):
+    """On the ADV the TCA8418 reader flushes its FIFO in begin(); a key held
+    through power-on never produces an event, so a one-shot isPressed()
+    check right after init can never fire. The gesture must be fed from
+    loop() and disarmed after a wake."""
+    setup = _function_body(main_src, "setup")
+    loop = _function_body(main_src, "loop")
+    assert "g_reset.begin(!fromSleep" in setup, (
+        "the gesture is armed after a wake too — the wake key could wipe "
+        "the device — or not armed at all")
+    assert "g_reset.feed(" in loop, "the gesture is no longer polled"
+    assert "store::erase()" in loop, "the gesture no longer erases anything"
+    assert "while (held < 2000)" not in main_src, (
+        "the blocking one-shot boot check is back")
+
+
 def _function_body(src, name):
     """Crude brace matcher — enough for one C++ function body."""
     m = re.search(rf"\b{name}\s*\([^)]*\)\s*\{{", src)

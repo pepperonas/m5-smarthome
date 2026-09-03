@@ -199,6 +199,14 @@ a private counter from 0 (on HDMI2, `i` jumped to AirPlay). `claimText` +
 value, so quick repeated presses advance and a never-confirmed one snaps back
 after 4 s like every other claim.
 
+**A key held through power-on is invisible on the ADV.** The TCA8418 reader
+flushes its FIFO in `begin()`; the held key produced its event before that
+and produces no other until released, so the one-shot `isPressed()` check
+after init could never fire — the documented reset gesture was dead. Now
+`core::ResetGesture` (host-tested) is fed from `loop()`: hold any key 2 s
+within 3 s of a cold boot; disarmed after a wake. The same flush discards
+the wake key, so waking does not also act as a command.
+
 **Snapshots and verdicts no longer share one overwrite slot** — a snapshot
 landing on an unread refusal left the optimistic change on screen forever.
 Verdicts have their own queue, drained first.

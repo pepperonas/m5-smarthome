@@ -15,6 +15,7 @@
 #include "ir_teufel.h"
 #include "netplan.h"
 #include "optimistic.h"
+#include "reset_gesture.h"
 
 using namespace core;
 
@@ -611,6 +612,58 @@ void test_a_body_that_would_not_fit_is_refused_not_truncated(void) {
     TEST_ASSERT_EQUAL_STRING("", out);
 }
 
+// ------------------------------------------------------- reset gesture ----
+
+// The first version checked once, right after keyboard init, for a key held
+// through power-on — which on the ADV is always 0, because the TCA8418
+// reader flushes its FIFO in begin() and a key already down never produces
+// another event. The gesture is now polled from the loop.
+void test_a_key_held_two_seconds_after_a_cold_boot_fires_once(void) {
+    ResetGesture g;
+    g.begin(true, 100);
+    TEST_ASSERT_TRUE(g.feed(false, 200) == ResetGesture::State::Idle);
+    TEST_ASSERT_TRUE(g.feed(true, 500) == ResetGesture::State::Holding);
+    TEST_ASSERT_TRUE(g.feed(true, 1500) == ResetGesture::State::Holding);
+    TEST_ASSERT_EQUAL_UINT32(kResetHoldMs - 1000, g.remainingMs(1500));
+    TEST_ASSERT_TRUE(g.feed(true, 500 + kResetHoldMs) == ResetGesture::State::Fire);
+    TEST_ASSERT_TRUE(g.feed(true, 500 + kResetHoldMs + 50) == ResetGesture::State::Idle);
+}
+
+void test_an_early_release_is_just_a_key_press(void) {
+    ResetGesture g;
+    g.begin(true, 0);
+    g.feed(true, 300);
+    TEST_ASSERT_TRUE(g.feed(false, 900) == ResetGesture::State::Idle);
+    TEST_ASSERT_EQUAL_UINT32(0u, g.remainingMs(900));
+    // A second, later hold inside the window still counts — and from its
+    // own start, not from the first press.
+    TEST_ASSERT_TRUE(g.feed(true, 1000) == ResetGesture::State::Holding);
+    TEST_ASSERT_TRUE(g.feed(true, 1000 + kResetHoldMs - 1) == ResetGesture::State::Holding);
+    TEST_ASSERT_TRUE(g.feed(true, 1000 + kResetHoldMs) == ResetGesture::State::Fire);
+}
+
+void test_a_hold_that_starts_after_the_window_does_nothing(void) {
+    ResetGesture g;
+    g.begin(true, 0);
+    TEST_ASSERT_TRUE(g.feed(true, kResetWindowMs) == ResetGesture::State::Idle);
+    TEST_ASSERT_TRUE(g.feed(true, kResetWindowMs + kResetHoldMs + 10) == ResetGesture::State::Idle);
+}
+
+void test_a_hold_that_starts_inside_the_window_may_finish_outside_it(void) {
+    ResetGesture g;
+    g.begin(true, 0);
+    g.feed(true, kResetWindowMs - 100);
+    TEST_ASSERT_TRUE(g.feed(true, kResetWindowMs - 100 + kResetHoldMs) == ResetGesture::State::Fire);
+}
+
+void test_the_wake_key_can_never_wipe_the_device(void) {
+    ResetGesture g;
+    g.begin(false, 0);                      // woke from deep sleep
+    for (uint32_t t = 0; t < kResetHoldMs * 2; t += 100) {
+        TEST_ASSERT_TRUE(g.feed(true, t) == ResetGesture::State::Idle);
+    }
+}
+
 // ------------------------------------------------------------- netplan ----
 
 void test_polling_is_fast_while_in_use_and_slow_when_idle(void) {
@@ -824,6 +877,11 @@ int main(int, char**) {
     RUN_TEST(test_the_ir_table_carries_the_house_codes);
     RUN_TEST(test_bit_timing_constants);
 
+    RUN_TEST(test_a_key_held_two_seconds_after_a_cold_boot_fires_once);
+    RUN_TEST(test_an_early_release_is_just_a_key_press);
+    RUN_TEST(test_a_hold_that_starts_after_the_window_does_nothing);
+    RUN_TEST(test_a_hold_that_starts_inside_the_window_may_finish_outside_it);
+    RUN_TEST(test_the_wake_key_can_never_wipe_the_device);
     RUN_TEST(test_polling_is_fast_while_in_use_and_slow_when_idle);
     RUN_TEST(test_backlight_dims_then_goes_dark);
     RUN_TEST(test_sleep_never_interrupts_an_in_flight_request);

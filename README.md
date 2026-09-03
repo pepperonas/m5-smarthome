@@ -8,25 +8,25 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 292 passing](https://img.shields.io/badge/tests-292%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
-![firmware tests: 107](https://img.shields.io/badge/firmware%20tests-107-brightgreen?style=flat-square)
+![tests: 298 passing](https://img.shields.io/badge/tests-298%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 112](https://img.shields.io/badge/firmware%20tests-112-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
-![tool tests: 114](https://img.shields.io/badge/tool%20tests-114-brightgreen?style=flat-square)
-![mutation probes: 38 caught](https://img.shields.io/badge/mutation%20probes-38%20caught-8A2BE2?style=flat-square)
+![tool tests: 115](https://img.shields.io/badge/tool%20tests-115-brightgreen?style=flat-square)
+![mutation probes: 41 caught](https://img.shields.io/badge/mutation%20probes-41%20caught-8A2BE2?style=flat-square)
 ![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
-![lines of code: 9 467](https://img.shields.io/badge/lines%20of%20code-9%20467-blue?style=flat-square)
+![lines of code: 9 651](https://img.shields.io/badge/lines%20of%20code-9%20651-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 5 332 lines](https://img.shields.io/badge/C%2B%2B-5%20332%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 4 052 lines](https://img.shields.io/badge/Python-4%20052%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![C++: 5 489 lines](https://img.shields.io/badge/C%2B%2B-5%20489%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 4 079 lines](https://img.shields.io/badge/Python-4%20079%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![aggregates: 10 backends](https://img.shields.io/badge/aggregates-10%20backends-informational?style=flat-square)
 ![write API: 14 named actions](https://img.shields.io/badge/write%20API-14%20named%20actions-informational?style=flat-square)
-![tested core: 8 pure modules](https://img.shields.io/badge/tested%20core-8%20pure%20modules-informational?style=flat-square)
+![tested core: 9 pure modules](https://img.shields.io/badge/tested%20core-9%20pure%20modules-informational?style=flat-square)
 
 ![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)
 ![secrets in repo: zero](https://img.shields.io/badge/secrets%20in%20repo-zero-success?logo=gnuprivacyguard&logoColor=white&style=flat-square)
@@ -246,10 +246,14 @@ remembered so later boots skip the lookup. If the Pi later moves, a transport
 failure triggers one re-discovery before anything is reported as broken. The
 Wi-Fi password may be blank too, for an open network.
 
-To start over: **hold any key while powering on** for two seconds — the screen
-says `Taste halten fuer Reset...` and confirms when the credentials are gone.
-Two seconds, so a key brushed while plugging in the cable does not wipe the
-configuration.
+To start over: **within three seconds after powering on, press and hold any
+key for two seconds** — the footer counts down `Halten: Reset in 2 s`, the
+screen confirms when the credentials are gone, and the device restarts. Press
+*after* it has booted, not through the power-on: the ADV's keyboard controller
+discards anything already held when it initialises. Two seconds, so a key
+brushed while plugging in the cable does not wipe the configuration; and the
+gesture is disarmed after a wake from sleep, so the key that woke the device
+cannot wipe it.
 
 ## Keys
 

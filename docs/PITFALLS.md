@@ -253,6 +253,25 @@ sees the view with the pending value and cycles from whatever the screen
 shows, and after 4 s without confirmation it snaps back to the truth like
 every other claim.
 
+### A key held through power-on is invisible on the ADV
+
+`TCA8418KeyboardReader::begin()` calls `flush()`, which drains the event FIFO
+and clears the interrupt. A key that was already down when the firmware
+started produced its press event *before* that flush and produces no other
+until it is released — so `isPressed()` reads 0 however long you hold it,
+and a one-shot "is a key held?" check right after init can never fire. The
+documented reset gesture was dead on the hardware it was written for.
+
+The gesture is now a state machine in core (`ResetGesture`, host-tested) fed
+from `loop()`: hold any key for two seconds within three seconds of a cold
+boot. A press that arrives *after* the flush is a fresh event and counts.
+Disarmed after a wake, so the key that woke the device cannot wipe it.
+
+Corollary worth knowing: the same flush discards the wake key itself, so the
+key that wakes the device does *not* also act as a command. Same for the
+original Cardputer? No — its GPIO matrix is scanned live, so `isPressed()`
+reflects a held key there. Test on the variant you ship for.
+
 ### A reused DHCP lease can be someone else's now
 
 The fast wake path reconnects with the stored BSSID, channel *and* the last
