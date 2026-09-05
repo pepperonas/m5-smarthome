@@ -208,7 +208,6 @@ int nextSelectable(const ControlList& l, int from, int dir) {
     int i = from;
     for (int n = 0; n < l.count; ++n) {
         i = (i + dir + l.count) % l.count;
-        if (i < 0) i = 0;
         if (selectable(l.items[i])) return i;
     }
     return from;                       // nothing else to land on

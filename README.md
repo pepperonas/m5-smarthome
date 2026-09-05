@@ -8,19 +8,19 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 317 passing](https://img.shields.io/badge/tests-317%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
-![firmware tests: 120](https://img.shields.io/badge/firmware%20tests-120-brightgreen?style=flat-square)
+![tests: 323 passing](https://img.shields.io/badge/tests-323%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![firmware tests: 126](https://img.shields.io/badge/firmware%20tests-126-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
 ![tool tests: 126](https://img.shields.io/badge/tool%20tests-126-brightgreen?style=flat-square)
 ![mutation probes: 41 caught](https://img.shields.io/badge/mutation%20probes-41%20caught-8A2BE2?style=flat-square)
 ![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
-![lines of code: 10 458](https://img.shields.io/badge/lines%20of%20code-10%20458-blue?style=flat-square)
+![lines of code: 10 600](https://img.shields.io/badge/lines%20of%20code-10%20600-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 5 999 lines](https://img.shields.io/badge/C%2B%2B-5%20999%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![C++: 6 141 lines](https://img.shields.io/badge/C%2B%2B-6%20141%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
 ![Python: 4 373 lines](https://img.shields.io/badge/Python-4%20373%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)

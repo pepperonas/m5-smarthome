@@ -188,3 +188,18 @@ void test_accelerators_find_their_control(void) {
     TEST_ASSERT_EQUAL(3, findAccel(l, 'm'));
     TEST_ASSERT_EQUAL(-1, findAccel(l, 'z'));
 }
+
+void test_the_cursor_can_start_from_nowhere(void) {
+    // firstSelectable() returns -1 on a screen of readouts, and that -1 is
+    // what the caller then holds as its cursor. Moving from there must not
+    // invent a selection out of nothing.
+    Dash d = makeDash();
+    UiState st;
+    ControlList l;
+    buildScreen(Screen::Climate, d, st, l);          // five readouts
+    TEST_ASSERT_EQUAL(-1, nextSelectable(l, -1, +1));
+    TEST_ASSERT_EQUAL(-1, nextSelectable(l, -1, -1));
+
+    buildScreen(Screen::Yamaha, d, st, l);           // four selectable rows
+    TEST_ASSERT_EQUAL(0, nextSelectable(l, -1, +1)); // forward lands on the first
+}
