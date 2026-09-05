@@ -203,3 +203,167 @@ void test_the_cursor_can_start_from_nowhere(void) {
     buildScreen(Screen::Yamaha, d, st, l);           // four selectable rows
     TEST_ASSERT_EQUAL(0, nextSelectable(l, -1, +1)); // forward lands on the first
 }
+
+// --------------------------------------------------------- adjust/activate
+
+static ControlList listFor(Screen s, const Dash& d, UiState& st) {
+    ControlList l;
+    buildScreen(s, d, st, l);
+    return l;
+}
+
+static int idx(const ControlList& l, Bind b) {
+    for (int i = 0; i < l.count; ++i) if (l.items[i].bind == b) return i;
+    return -1;
+}
+
+void test_a_level_steps_and_clamps(void) {
+    Dash d = makeDash();
+    UiState st;
+    st.roomId = 83;                                          // Kueche, bri 254
+    ControlList l = listFor(Screen::Room, d, st);
+    KeyResult up = adjust(l, idx(l, Bind::RoomBri), +1, d, st, 1000);
+    TEST_ASSERT_TRUE(up.intent.valid);
+    TEST_ASSERT_EQUAL_STRING("bri", up.intent.action);
+    TEST_ASSERT_EQUAL(83, up.intent.arg);
+    TEST_ASSERT_EQUAL(254, up.intent.arg2);                  // clamped, not 284
+    TEST_ASSERT_EQUAL_STRING("Kueche 100%", up.intent.label);
+
+    st.roomId = 85;                                          // Flur, bri 24
+    l = listFor(Screen::Room, d, st);
+    KeyResult dn = adjust(l, idx(l, Bind::RoomBri), -1, d, st, 1000);
+    TEST_ASSERT_EQUAL(1, dn.intent.arg2);                    // never 0: that is "off"
+}
+
+void test_the_room_list_adjusts_brightness_straight_from_the_row(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l = listFor(Screen::Rooms, d, st);
+    KeyResult r = adjust(l, 4, +1, d, st, 1000);            // Flur row
+    TEST_ASSERT_EQUAL_STRING("hue", r.intent.target);
+    TEST_ASSERT_EQUAL_STRING("bri", r.intent.action);
+    TEST_ASSERT_EQUAL(85, r.intent.arg);
+    TEST_ASSERT_EQUAL(54, r.intent.arg2);                    // 24 + 30
+}
+
+void test_receiver_volume_is_a_step_and_stops_at_the_ceiling(void) {
+    Dash d = makeDash();                                     // raw -280
+    UiState st;
+    ControlList l = listFor(Screen::Yamaha, d, st);
+    KeyResult r = adjust(l, idx(l, Bind::YamVol), +1, d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("vol", r.intent.action);
+    TEST_ASSERT_EQUAL(2, r.intent.arg);                      // +1 dB = 2 raw steps
+    TEST_ASSERT_EQUAL_STRING("-27.0 dB", r.intent.label);
+
+    d.yam.raw = -200;                                        // at the top
+    l = listFor(Screen::Yamaha, d, st);
+    r = adjust(l, idx(l, Bind::YamVol), +1, d, st, 1000);
+    TEST_ASSERT_FALSE(r.intent.valid);                       // nothing past max
+}
+
+void test_a_choice_cycles_from_what_is_shown(void) {
+    Dash d = makeDash();
+    strcpy(d.yam.input, "HDMI2");
+    UiState st;
+    ControlList l = listFor(Screen::Yamaha, d, st);
+    KeyResult r = adjust(l, idx(l, Bind::YamInput), +1, d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("input", r.intent.action);
+    TEST_ASSERT_EQUAL_STRING("HDMI3", r.intent.name);
+    r = adjust(l, idx(l, Bind::YamInput), -1, d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("HDMI1", r.intent.name);
+}
+
+void test_a_disabled_control_refuses_with_a_toast(void) {
+    Dash d = makeDash();                                     // warnOwned
+    UiState st;
+    ControlList l = listFor(Screen::Lichtwerk, d, st);
+    KeyResult r = adjust(l, idx(l, Bind::LwEffect), +1, d, st, 1000);
+    TEST_ASSERT_FALSE(r.intent.valid);
+    TEST_ASSERT_EQUAL_STRING("Strip-Warn aktiv", st.toast);
+}
+
+void test_the_teufel_path_is_local(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l = listFor(Screen::Teufel, d, st);
+    KeyResult r = adjust(l, idx(l, Bind::TfPath), +1, d, st, 1000);
+    TEST_ASSERT_FALSE(r.intent.valid);
+    TEST_ASSERT_TRUE(st.teufelUseIr);
+    l = listFor(Screen::Teufel, d, st);
+    KeyResult v = adjust(l, idx(l, Bind::TfVol), +1, d, st, 1000);
+    TEST_ASSERT_TRUE(v.viaIr);                               // now blind
+    TEST_ASSERT_EQUAL_STRING("tf", v.intent.target);
+}
+
+void test_toggles_flip_from_the_current_state(void) {
+    Dash d = makeDash();                                     // yam on, tf mute on
+    UiState st;
+    ControlList l = listFor(Screen::Yamaha, d, st);
+    KeyResult r = activate(l, idx(l, Bind::YamOn), d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("off", r.intent.action);
+    d.yam.on = false;
+    l = listFor(Screen::Yamaha, d, st);
+    r = activate(l, idx(l, Bind::YamOn), d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("on", r.intent.action);
+
+    l = listFor(Screen::Teufel, d, st);
+    r = activate(l, idx(l, Bind::TfMute), d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("mute", r.intent.action);
+    TEST_ASSERT_EQUAL_STRING("Mute: bekannt wirkungslos", st.toast);
+}
+
+void test_enter_on_a_level_or_choice_does_nothing(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l = listFor(Screen::Yamaha, d, st);
+    TEST_ASSERT_FALSE(activate(l, idx(l, Bind::YamVol), d, st, 1000).intent.valid);
+    TEST_ASSERT_FALSE(activate(l, idx(l, Bind::YamInput), d, st, 1000).intent.valid);
+}
+
+void test_links_navigate(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l = listFor(Screen::Home, d, st);
+    activate(l, idx(l, Bind::HomeYamaha), d, st, 1000);
+    TEST_ASSERT_TRUE(st.screen == Screen::Yamaha);
+    TEST_ASSERT_EQUAL(0, st.cursor);
+
+    st.screen = Screen::Rooms;
+    l = listFor(Screen::Rooms, d, st);
+    activate(l, 2, d, st, 1000);                             // Kueche
+    TEST_ASSERT_TRUE(st.screen == Screen::Room);
+    TEST_ASSERT_EQUAL(83, st.roomId);
+}
+
+void test_fog_on_asks_and_fog_off_does_not(void) {
+    Dash d = makeDash();                                     // fog off
+    UiState st;
+    ControlList l = listFor(Screen::Fog, d, st);
+    KeyResult r = activate(l, idx(l, Bind::FogOn), d, st, 1000);
+    TEST_ASSERT_FALSE(r.intent.valid);
+    TEST_ASSERT_TRUE(st.confirming);
+    TEST_ASSERT_EQUAL_STRING("on", st.pending.action);
+
+    st = UiState();
+    d.fog.on = true;
+    l = listFor(Screen::Fog, d, st);
+    r = activate(l, idx(l, Bind::FogOn), d, st, 1000);
+    TEST_ASSERT_EQUAL_STRING("off", r.intent.action);
+    TEST_ASSERT_FALSE(st.confirming);
+}
+
+void test_space_toggles_the_highlighted_room(void) {
+    Dash d = makeDash();
+    UiState st;
+    KeyResult r = toggleRoom(d, 81, st, 1000);               // Wohnzimmer, on
+    TEST_ASSERT_EQUAL_STRING("off", r.intent.action);
+    TEST_ASSERT_EQUAL(81, r.intent.arg);
+    TEST_ASSERT_EQUAL_STRING("Wohnzimmer aus", r.intent.label);
+}
+
+void test_escape_goes_up_one_level(void) {
+    TEST_ASSERT_TRUE(parentScreen(Screen::Room) == Screen::Rooms);
+    TEST_ASSERT_TRUE(parentScreen(Screen::Rooms) == Screen::Home);
+    TEST_ASSERT_TRUE(parentScreen(Screen::Yamaha) == Screen::Home);
+    TEST_ASSERT_TRUE(parentScreen(Screen::Home) == Screen::Home);
+}

@@ -63,4 +63,19 @@ int primaryToggle(const ControlList& l);
 // Index of the control whose accelerator is `ch`, or -1.
 int findAccel(const ControlList& l, char ch);
 
+// `,` `/` `-` `+` on row idx (dir -1/+1). May mutate cycle indices, the
+// Teufel path and the toast. Returns the intent to send, if any.
+KeyResult adjust(const ControlList& l, int idx, int dir, const Dash& d,
+                 UiState& st, uint32_t nowMs);
+
+// Enter on row idx: flips a Toggle, opens a Link, fires an Action.
+KeyResult activate(const ControlList& l, int idx, const Dash& d, UiState& st,
+                   uint32_t nowMs);
+
+// Space on the room list: the highlighted room, on or off.
+KeyResult toggleRoom(const Dash& d, int roomId, UiState& st, uint32_t nowMs);
+
+// Where Esc goes from `s`.
+Screen parentScreen(Screen s);
+
 }  // namespace core

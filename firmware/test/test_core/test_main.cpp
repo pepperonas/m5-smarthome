@@ -830,6 +830,18 @@ void test_scrolling_keeps_the_cursor_visible(void);
 void test_the_primary_toggle_is_the_first_toggle(void);
 void test_accelerators_find_their_control(void);
 void test_the_cursor_can_start_from_nowhere(void);
+void test_a_level_steps_and_clamps(void);
+void test_the_room_list_adjusts_brightness_straight_from_the_row(void);
+void test_receiver_volume_is_a_step_and_stops_at_the_ceiling(void);
+void test_a_choice_cycles_from_what_is_shown(void);
+void test_a_disabled_control_refuses_with_a_toast(void);
+void test_the_teufel_path_is_local(void);
+void test_toggles_flip_from_the_current_state(void);
+void test_enter_on_a_level_or_choice_does_nothing(void);
+void test_links_navigate(void);
+void test_fog_on_asks_and_fog_off_does_not(void);
+void test_space_toggles_the_highlighted_room(void);
+void test_escape_goes_up_one_level(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -911,6 +923,18 @@ int main(int, char**) {
     RUN_TEST(test_the_primary_toggle_is_the_first_toggle);
     RUN_TEST(test_accelerators_find_their_control);
     RUN_TEST(test_the_cursor_can_start_from_nowhere);
+    RUN_TEST(test_a_level_steps_and_clamps);
+    RUN_TEST(test_the_room_list_adjusts_brightness_straight_from_the_row);
+    RUN_TEST(test_receiver_volume_is_a_step_and_stops_at_the_ceiling);
+    RUN_TEST(test_a_choice_cycles_from_what_is_shown);
+    RUN_TEST(test_a_disabled_control_refuses_with_a_toast);
+    RUN_TEST(test_the_teufel_path_is_local);
+    RUN_TEST(test_toggles_flip_from_the_current_state);
+    RUN_TEST(test_enter_on_a_level_or_choice_does_nothing);
+    RUN_TEST(test_links_navigate);
+    RUN_TEST(test_fog_on_asks_and_fog_off_does_not);
+    RUN_TEST(test_space_toggles_the_highlighted_room);
+    RUN_TEST(test_escape_goes_up_one_level);
     RUN_TEST(test_polling_is_fast_while_in_use_and_slow_when_idle);
     RUN_TEST(test_backlight_dims_then_goes_dark);
     RUN_TEST(test_sleep_never_interrupts_an_in_flight_request);

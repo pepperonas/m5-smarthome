@@ -17,6 +17,45 @@ int indexOf(const char* value, const char* const* list, int count) {
     return -1;
 }
 
+void setStr(char* dst, int cap, const char* src) {
+    int n = 0;
+    while (src && src[n] && n < cap - 1) { dst[n] = src[n]; ++n; }
+    dst[n] = 0;
+}
+
+Intent make(const char* target, const char* action, int arg = 0, bool hasArg = false,
+            int arg2 = 0, bool hasArg2 = false) {
+    Intent i;
+    i.valid = true;
+    setStr(i.target, sizeof(i.target), target);
+    setStr(i.action, sizeof(i.action), action);
+    i.arg = arg; i.hasArg = hasArg; i.arg2 = arg2; i.hasArg2 = hasArg2;
+    return i;
+}
+
+int cycle(int i, int n, int dir) { return n <= 0 ? 0 : (i + dir + n) % n; }
+
+int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+KeyResult refused(const Control& c, UiState& st, uint32_t nowMs) {
+    KeyResult out;
+    out.redraw = true;
+    const bool strip = c.bind == Bind::LwBri || c.bind == Bind::LwEffect || c.bind == Bind::LwOn;
+    toast(st, strip ? "Strip-Warn aktiv" : "nicht verfuegbar", nowMs);
+    return out;
+}
+
+KeyResult roomBrightness(const Dash& d, int roomId, int dir, int step) {
+    KeyResult out;
+    out.redraw = true;
+    const Room* r = findRoom(d, roomId);
+    if (!r) return out;
+    const int bri = clampi((int)r->bri + dir * step, 1, 254);
+    out.intent = make("hue", "bri", roomId, true, bri, true);
+    snprintf(out.intent.label, sizeof(out.intent.label), "%s %d%%", r->name, (bri * 100) / 254);
+    return out;
+}
+
 Control fromSpec(const ControlSpec& s) {
     Control c;
     c.kind = s.kind;
@@ -233,6 +272,201 @@ int findAccel(const ControlList& l, char ch) {
     if (!ch) return -1;
     for (int i = 0; i < l.count; ++i) if (l.items[i].accel == ch) return i;
     return -1;
+}
+
+KeyResult adjust(const ControlList& l, int idx, int dir, const Dash& d,
+                 UiState& st, uint32_t nowMs) {
+    KeyResult out;
+    out.redraw = true;
+    if (idx < 0 || idx >= l.count) return out;
+    const Control& c = l.items[idx];
+    if (!c.enabled) return refused(c, st, nowMs);
+    out.viaIr = st.teufelUseIr && (c.bind == Bind::TfVol || c.bind == Bind::TfInput);
+
+    switch (c.kind) {
+        case ControlKind::Toggle:
+            return activate(l, idx, d, st, nowMs);
+
+        case ControlKind::Link:
+            // Room rows: brightness straight from the list, the fast path.
+            if (c.key) return roomBrightness(d, c.key, dir, 30);
+            return out;
+
+        case ControlKind::Level: {
+            const int next = clampi(c.value + dir * c.step, c.min, c.max);
+            switch (c.bind) {
+                case Bind::RoomBri:
+                    return roomBrightness(d, c.key, dir, c.step);
+                case Bind::LwBri:
+                    out.intent = make("lw", "bri", 0, false, next, true);
+                    snprintf(out.intent.label, sizeof(out.intent.label), "Strip %d%%", (next * 100) / 255);
+                    return out;
+                case Bind::YamVol:
+                    if (next == c.value) return out;           // at the edge: nothing past it
+                    out.intent = make("yam", "vol", dir * 2, true);
+                    snprintf(out.intent.label, sizeof(out.intent.label), "%.1f dB", next / 10.0);
+                    return out;
+                case Bind::TfVol:
+                    if (next == c.value) return out;
+                    out.intent = make("tf", "vol", dir, true);
+                    setStr(out.intent.label, sizeof(out.intent.label), dir > 0 ? "Teufel lauter" : "Teufel leiser");
+                    return out;
+                default:
+                    return out;
+            }
+        }
+
+        case ControlKind::Choice: {
+            switch (c.bind) {
+                case Bind::TfPath:
+                    st.teufelUseIr = !st.teufelUseIr;
+                    toast(st, st.teufelUseIr ? "Weg: IR (blind)" : "Weg: Netz", nowMs);
+                    return out;
+                case Bind::LwEffect: {
+                    st.lwEffect = cycle(c.value, kLwEffectCount, dir);
+                    out.intent = make("lw", "effect");
+                    setStr(out.intent.name, sizeof(out.intent.name), kLwEffects[st.lwEffect]);
+                    snprintf(out.intent.label, sizeof(out.intent.label), "Effekt %s", kLwEffects[st.lwEffect]);
+                    return out;
+                }
+                case Bind::YamInput: {
+                    st.yamInput = cycle(c.value, kYamahaInputCount, dir);
+                    out.intent = make("yam", "input");
+                    setStr(out.intent.name, sizeof(out.intent.name), kYamahaInputs[st.yamInput]);
+                    snprintf(out.intent.label, sizeof(out.intent.label), "Eingang %s", kYamahaInputs[st.yamInput]);
+                    return out;
+                }
+                case Bind::TfInput: {
+                    st.tfInput = cycle(c.value, kTeufelInputCount, dir);
+                    out.intent = make("tf", "input");
+                    setStr(out.intent.name, sizeof(out.intent.name), kTeufelInputs[st.tfInput]);
+                    snprintf(out.intent.label, sizeof(out.intent.label), "Eingang %s", kTeufelInputs[st.tfInput]);
+                    return out;
+                }
+                case Bind::DiscoMode: {
+                    st.discoMode = cycle(c.value, kDiscoModeCount, dir);
+                    out.intent = make("disco", "mode");
+                    setStr(out.intent.name, sizeof(out.intent.name), kDiscoModes[st.discoMode]);
+                    snprintf(out.intent.label, sizeof(out.intent.label), "Modus %s", kDiscoModes[st.discoMode]);
+                    return out;
+                }
+                default:
+                    return out;
+            }
+        }
+
+        case ControlKind::Picker:
+        case ControlKind::Stepper:
+        case ControlKind::Color:
+        case ControlKind::Action:
+        case ControlKind::Readout:
+            return out;                 // later stages give these meaning
+    }
+    return out;
+}
+
+KeyResult activate(const ControlList& l, int idx, const Dash& d, UiState& st,
+                   uint32_t nowMs) {
+    KeyResult out;
+    out.redraw = true;
+    if (idx < 0 || idx >= l.count) return out;
+    const Control& c = l.items[idx];
+    if (!c.enabled) return refused(c, st, nowMs);
+    out.viaIr = st.teufelUseIr && (c.bind == Bind::TfOn || c.bind == Bind::TfMute);
+    const bool on = c.value != 0;
+
+    switch (c.kind) {
+        case ControlKind::Toggle:
+            switch (c.bind) {
+                case Bind::RoomOn:
+                    return toggleRoom(d, c.key, st, nowMs);
+                case Bind::LwOn:
+                    out.intent = make("lw", on ? "off" : "on");
+                    setStr(out.intent.label, sizeof(out.intent.label), on ? "Strip aus" : "Strip an");
+                    return out;
+                case Bind::YamOn:
+                    out.intent = make("yam", on ? "off" : "on");
+                    setStr(out.intent.label, sizeof(out.intent.label), on ? "Yamaha aus" : "Yamaha an");
+                    return out;
+                case Bind::YamMute:
+                    out.intent = make("yam", "mute");
+                    setStr(out.intent.label, sizeof(out.intent.label), on ? "Ton an" : "Stumm");
+                    return out;
+                case Bind::TfOn:
+                    out.intent = make("tf", "power");
+                    setStr(out.intent.label, sizeof(out.intent.label), "Teufel Power");
+                    return out;
+                case Bind::TfMute:
+                    out.intent = make("tf", "mute");
+                    // Documented house quirk: this byte reaches the box and
+                    // does nothing. Say so rather than let the user think it
+                    // is broken.
+                    toast(st, "Mute: bekannt wirkungslos", nowMs);
+                    return out;
+                case Bind::DiscoOn:
+                    out.intent = make("disco", on ? "off" : "on");
+                    setStr(out.intent.label, sizeof(out.intent.label), on ? "Disco aus" : "Disco an");
+                    return out;
+                case Bind::FogOn:
+                    if (on) {
+                        // Switching a heater off is never gated.
+                        out.intent = make("fog", "off");
+                        setStr(out.intent.label, sizeof(out.intent.label), "Nebel aus");
+                        return out;
+                    } else {
+                        Intent i = make("fog", "on");
+                        i.needsConfirm = true;
+                        setStr(i.label, sizeof(i.label), "Nebel AN");
+                        st.confirming = true;
+                        st.pending = i;
+                        return out;                  // nothing sent yet
+                    }
+                default:
+                    return out;
+            }
+
+        case ControlKind::Link:
+            switch (c.bind) {
+                case Bind::HomeRooms:   st.screen = Screen::Rooms; break;
+                case Bind::HomeStrip:   st.screen = Screen::Lichtwerk; break;
+                case Bind::HomeYamaha:  st.screen = Screen::Yamaha; break;
+                case Bind::HomeTeufel:  st.screen = Screen::Teufel; break;
+                case Bind::HomeDisco:   st.screen = Screen::Disco; break;
+                case Bind::HomeFog:     st.screen = Screen::Fog; break;
+                case Bind::HomeClimate: st.screen = Screen::Climate; break;
+                default:
+                    if (c.key) { st.roomId = c.key; st.screen = Screen::Room; }
+                    break;
+            }
+            st.cursor = 0;
+            st.scroll = 0;
+            return out;
+
+        case ControlKind::Level:
+        case ControlKind::Choice:
+        case ControlKind::Picker:
+        case ControlKind::Stepper:
+        case ControlKind::Color:
+        case ControlKind::Action:
+        case ControlKind::Readout:
+            return out;
+    }
+    return out;
+}
+
+KeyResult toggleRoom(const Dash& d, int roomId, UiState& st, uint32_t nowMs) {
+    (void)st; (void)nowMs;
+    KeyResult out;
+    out.redraw = true;
+    const Room* r = findRoom(d, roomId);
+    if (!r) return out;
+    out.intent = make("hue", r->on ? "off" : "on", roomId, true);
+    snprintf(out.intent.label, sizeof(out.intent.label), "%s %s", r->name, r->on ? "aus" : "an");
+    return out;
+}
+
+Screen parentScreen(Screen s) {
+    return s == Screen::Room ? Screen::Rooms : Screen::Home;
 }
 
 }  // namespace core
