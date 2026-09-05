@@ -253,6 +253,24 @@ work. The byte is mislabelled in the original capture; the cause is unknown
 and documented house-wide. The firmware offers it and shows a toast saying it
 is known to be ineffective. **Do not re-debug this.**
 
+## In flight: the control grammar (stage 1 of 4)
+
+The remote reaches each app's front door — on/off, one level, one cycled
+value — while the house APIs expose about forty-five more functions. The plan
+is one grammar for all of them: every app screen is a list of controls driven
+by the same five keys.
+
+- Design: `docs/superpowers/specs/2026-09-05-control-grammar-full-house-design.md`
+- Stage 1 plan (7 tasks): `docs/superpowers/plans/2026-09-05-stage1-control-grammar.md`
+- **Live progress, rulings and the resume instructions:**
+  `.superpowers/sdd/2026-09-05-stage1-control-grammar/progress.md` — gitignored,
+  so it lives only on this machine. Read its HANDOVER section before touching
+  anything; it says which files are uncommitted and how to verify them.
+
+Stages after this one (each gets its own plan, none started): dB analysis,
+colours, the per-app extras. Nothing device-side is verified until the owner
+flashes and walks the five-point checklist at the end of each stage.
+
 ## Open
 
 No Cardputer was attached during development, so nothing device-side is

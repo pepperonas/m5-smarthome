@@ -34,6 +34,9 @@ python3 tools/gen_ir_table.py
 git diff --quiet firmware/lib/core/ir_teufel.h \
   || { echo "IR table drifted; commit the regenerated header"; exit 1; }
 
+echo "==> control tables match their source"
+python3 tools/gen_controls.py --check
+
 echo "==> badges are current"
 python3 tools/badges.py --check
 

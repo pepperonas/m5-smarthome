@@ -8,25 +8,25 @@
 [![Last commit](https://img.shields.io/github/last-commit/pepperonas/m5-smarthome?style=flat-square&logo=git&logoColor=white)](https://github.com/pepperonas/m5-smarthome/commits/main)
 [![Licence](https://img.shields.io/github/license/pepperonas/m5-smarthome?style=flat-square)](LICENSE)
 
-![tests: 301 passing](https://img.shields.io/badge/tests-301%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
+![tests: 309 passing](https://img.shields.io/badge/tests-309%20passing-brightgreen?logo=checkmarx&logoColor=white&style=flat-square)
 ![firmware tests: 112](https://img.shields.io/badge/firmware%20tests-112-brightgreen?style=flat-square)
 ![gateway tests: 71](https://img.shields.io/badge/gateway%20tests-71-brightgreen?style=flat-square)
-![tool tests: 118](https://img.shields.io/badge/tool%20tests-118-brightgreen?style=flat-square)
+![tool tests: 126](https://img.shields.io/badge/tool%20tests-126-brightgreen?style=flat-square)
 ![mutation probes: 41 caught](https://img.shields.io/badge/mutation%20probes-41%20caught-8A2BE2?style=flat-square)
 ![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
-![lines of code: 9 688](https://img.shields.io/badge/lines%20of%20code-9%20688-blue?style=flat-square)
+![lines of code: 10 065](https://img.shields.io/badge/lines%20of%20code-10%20065-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
-![C++: 5 489 lines](https://img.shields.io/badge/C%2B%2B-5%20489%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 4 116 lines](https://img.shields.io/badge/Python-4%20116%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![C++: 5 601 lines](https://img.shields.io/badge/C%2B%2B-5%20601%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
+![Python: 4 378 lines](https://img.shields.io/badge/Python-4%20378%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![aggregates: 10 backends](https://img.shields.io/badge/aggregates-10%20backends-informational?style=flat-square)
 ![write API: 14 named actions](https://img.shields.io/badge/write%20API-14%20named%20actions-informational?style=flat-square)
-![tested core: 9 pure modules](https://img.shields.io/badge/tested%20core-9%20pure%20modules-informational?style=flat-square)
+![tested core: 10 pure modules](https://img.shields.io/badge/tested%20core-10%20pure%20modules-informational?style=flat-square)
 
 ![PSRAM required: none](https://img.shields.io/badge/PSRAM%20required-none-success?style=flat-square)
 ![secrets in repo: zero](https://img.shields.io/badge/secrets%20in%20repo-zero-success?logo=gnuprivacyguard&logoColor=white&style=flat-square)
@@ -38,7 +38,7 @@
 ![runs on: Raspberry Pi](https://img.shields.io/badge/runs%20on-Raspberry%20Pi-A22846?logo=raspberrypi&logoColor=white&style=flat-square)
 ![service: systemd](https://img.shields.io/badge/service-systemd-30D475?logo=linux&logoColor=black&style=flat-square)
 ![protocol: HTTP + NEC IR](https://img.shields.io/badge/protocol-HTTP%20%2B%20NEC%20IR-informational?style=flat-square)
-![docs: 6 documents](https://img.shields.io/badge/docs-6%20documents-informational?logo=markdown&logoColor=white&style=flat-square)
+![docs: 7 documents](https://img.shields.io/badge/docs-7%20documents-informational?logo=markdown&logoColor=white&style=flat-square)
 ![UI language: Deutsch](https://img.shields.io/badge/UI%20language-Deutsch-informational?style=flat-square)
 ![code style: commented for the next reader](https://img.shields.io/badge/code%20style-commented%20for%20the%20next%20reader-informational?style=flat-square)
 
@@ -81,8 +81,9 @@ associating.
 
 **Documentation** — [Architecture](docs/ARCHITECTURE.md) ·
 [Gateway API](docs/API.md) · [Running the gateway](docs/GATEWAY.md) ·
-[Testing](docs/TESTING.md) · [Pitfalls](docs/PITFALLS.md) ·
-[What is not measured](docs/MEASURE.md) · [Contributing](CONTRIBUTING.md)
+[Controls](docs/CONTROLS.md) · [Testing](docs/TESTING.md) ·
+[Pitfalls](docs/PITFALLS.md) · [What is not measured](docs/MEASURE.md) ·
+[Contributing](CONTRIBUTING.md)
 
 ---
 

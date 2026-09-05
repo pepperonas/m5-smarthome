@@ -298,9 +298,16 @@ def test_documented_files_exist():
 
 
 def _core_modules():
-    """Every pure module, from the headers on disk."""
+    """Every pure module, from the headers on disk. A generated data table is
+    not a module: it decides nothing, and its content is already pinned to
+    its source by the generator's own drift check."""
     d = ROOT / "firmware" / "lib" / "core"
-    return sorted(p.stem for p in d.glob("*.h"))
+    out = []
+    for p in sorted(d.glob("*.h")):
+        if p.read_text(errors="ignore").lstrip().startswith("// GENERATED"):
+            continue
+        out.append(p.stem)
+    return out
 
 
 def test_every_core_module_appears_in_the_architecture_table():
@@ -322,8 +329,14 @@ def test_every_core_module_appears_in_the_testing_table():
 
 def test_the_module_tables_name_no_module_that_does_not_exist():
     """The other direction: a renamed or deleted module leaves a row behind
-    that reads as documentation of something real."""
-    known = set(_core_modules()) | {
+    that reads as documentation of something real.
+
+    This check is about files, not decisions: `ir_teufel.h` is a generated
+    data table like `controls_table.h` (so `_core_modules()` skips it), but
+    it earned a documentation row anyway — it is real and on disk, which is
+    all this direction of the check cares about."""
+    d = ROOT / "firmware" / "lib" / "core"
+    known = {p.stem for p in d.glob("*.h")} | {
         # Gateway modules, documented in the same tables.
         "aggregate", "actions", "yamaha_xml", "backends", "poller", "config",
     }

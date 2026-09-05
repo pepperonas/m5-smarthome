@@ -74,6 +74,12 @@ jobs:
           python tools/gen_ir_table.py
           git diff --exit-code firmware/lib/core/ir_teufel.h
 
+      # The control tables are generated from firmware/controls.json, the
+      # same discipline as the IR table above and for the same reason.
+      - name: Control tables are in sync with their source
+        run: |
+          python tools/gen_controls.py --check
+
       # Reads the bytes itself rather than shelling out to grep — see
       # tools/scan_secrets.py for why that distinction is load-bearing.
       - name: No secrets in the tree

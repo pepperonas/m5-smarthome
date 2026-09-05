@@ -1,0 +1,55 @@
+{
+  "_comment": "Canonical control tables. tools/gen_controls.py turns this into lib/core/controls_table.h and docs/CONTROLS.md. Labels are ASCII: the panel font has no umlauts.",
+  "kinds": ["Toggle", "Level", "Choice", "Picker", "Stepper", "Color", "Action", "Link", "Readout"],
+  "fmts": ["Plain", "Pct254", "Pct255", "Db10"],
+  "screens": {
+    "Home": [
+      {"kind": "Link", "bind": "HomeRooms",   "label": "1 Raeume"},
+      {"kind": "Link", "bind": "HomeStrip",   "label": "2 Strip"},
+      {"kind": "Link", "bind": "HomeYamaha",  "label": "3 Yamaha"},
+      {"kind": "Link", "bind": "HomeTeufel",  "label": "4 Teufel"},
+      {"kind": "Link", "bind": "HomeDisco",   "label": "5 Disco"},
+      {"kind": "Link", "bind": "HomeFog",     "label": "6 Nebel"},
+      {"kind": "Link", "bind": "HomeClimate", "label": "7 Klima"}
+    ],
+    "Rooms": [],
+    "Room": [
+      {"kind": "Toggle", "bind": "RoomOn",  "label": "An", "key": "p"},
+      {"kind": "Level",  "bind": "RoomBri", "label": "Helligkeit", "min": 1, "max": 254, "step": 30, "fmt": "Pct254"}
+    ],
+    "Lichtwerk": [
+      {"kind": "Toggle", "bind": "LwOn",     "label": "Strom", "key": "p"},
+      {"kind": "Level",  "bind": "LwBri",    "label": "Helligkeit", "min": 0, "max": 255, "step": 32, "fmt": "Pct255"},
+      {"kind": "Choice", "bind": "LwEffect", "label": "Effekt", "key": "e"}
+    ],
+    "Yamaha": [
+      {"kind": "Toggle", "bind": "YamOn",    "label": "Strom", "key": "p"},
+      {"kind": "Level",  "bind": "YamVol",   "label": "Pegel", "min": -800, "max": -200, "step": 10, "fmt": "Db10"},
+      {"kind": "Choice", "bind": "YamInput", "label": "Eingang", "key": "i"},
+      {"kind": "Toggle", "bind": "YamMute",  "label": "Stumm", "key": "m"}
+    ],
+    "Teufel": [
+      {"kind": "Toggle", "bind": "TfOn",    "label": "Strom ~", "key": "p"},
+      {"kind": "Choice", "bind": "TfPath",  "label": "Weg", "key": "w"},
+      {"kind": "Level",  "bind": "TfVol",   "label": "Lautst. ~", "min": 0, "max": 50, "step": 1, "fmt": "Plain"},
+      {"kind": "Choice", "bind": "TfInput", "label": "Eingang ~", "key": "i"},
+      {"kind": "Toggle", "bind": "TfMute",  "label": "Stumm ~", "key": "m"}
+    ],
+    "Disco": [
+      {"kind": "Toggle", "bind": "DiscoOn",   "label": "Lichter", "key": "p"},
+      {"kind": "Choice", "bind": "DiscoMode", "label": "Modus", "key": "o"}
+    ],
+    "Fog": [
+      {"kind": "Toggle",  "bind": "FogOn",   "label": "Nebel", "key": "p"},
+      {"kind": "Readout", "bind": "FogTank", "label": "Tank"},
+      {"kind": "Readout", "bind": "FogNote", "label": "220 V, heiss"}
+    ],
+    "Climate": [
+      {"kind": "Readout", "bind": "ClimaIn",     "label": "Innen"},
+      {"kind": "Readout", "bind": "ClimaOut",    "label": "Garten"},
+      {"kind": "Readout", "bind": "ClimaWx",     "label": "Wetter"},
+      {"kind": "Readout", "bind": "ClimaWxDesc", "label": ""},
+      {"kind": "Readout", "bind": "ClimaPi",     "label": "Pi"}
+    ]
+  }
+}
