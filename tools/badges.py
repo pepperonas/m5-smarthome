@@ -153,9 +153,17 @@ def count_docs():
 
 
 def count_pure_modules():
-    """Modules in the tested core — the ratio that makes the rest testable."""
+    """Modules in the tested core — the ratio that makes the rest testable.
+
+    A generated data table is not a module: it decides nothing, and its
+    content is pinned to its source by the generator's own drift check. Same
+    rule as `_core_modules()` in tools/tests/test_docs_sync.py, and for the
+    same reason — a badge that counts them contradicts the documentation
+    tables that do not.
+    """
     core = ROOT / "firmware" / "lib" / "core"
-    return len([p for p in core.glob("*.h")])
+    return len([p for p in core.glob("*.h")
+                if not p.read_text(errors="ignore").lstrip().startswith("// GENERATED")])
 
 
 def count_named_actions():

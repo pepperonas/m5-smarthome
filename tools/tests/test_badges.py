@@ -213,3 +213,23 @@ def test_the_committed_readme_is_up_to_date():
 def test_check_mode_passes_on_a_current_readme():
     sys.argv = ["badges.py", "--check"]
     assert badges.main() == 0
+
+
+def test_the_module_badge_counts_what_the_documentation_tables_count():
+    """Two places decide what a "pure module" is: this badge, and the guard
+    that demands a documentation row for each. They must agree, or the README
+    claims a number the docs contradict — which is what happened when the
+    first generated data table landed and the badge counted it as a module.
+    """
+    import test_docs_sync
+    assert badges.count_pure_modules() == len(test_docs_sync._core_modules())
+
+
+def test_a_generated_data_table_is_not_counted_as_a_module():
+    """The property behind the number, so the count cannot drift back by
+    someone reintroducing a plain glob."""
+    core = ROOT / "firmware" / "lib" / "core"
+    generated = [p for p in core.glob("*.h")
+                 if p.read_text(errors="ignore").lstrip().startswith("// GENERATED")]
+    assert generated, "no generated header on disk — this pin has nothing to prove"
+    assert badges.count_pure_modules() == len(list(core.glob("*.h"))) - len(generated)

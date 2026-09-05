@@ -49,6 +49,7 @@ what makes the interesting half runnable on a laptop.
 | `keymap` | a keyboard report to a key press |
 | `command` | fuzzy matching for the typed command line |
 | `optimistic` | which local assumptions override the snapshot, for how long |
+| `controls` | every app screen as rows: what each row shows, what a key on it sends |
 | `netplan` | poll intervals, backlight steps, sleep threshold, backoff |
 | `ui_state` | screens, key handling, the confirmation gate |
 | `ir_teufel` | the generated code table, checked against its CSV |
