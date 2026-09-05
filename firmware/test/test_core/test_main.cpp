@@ -824,6 +824,11 @@ void test_levels_and_choices_show_the_current_value(void);
 void test_strip_controls_are_disabled_while_warn_owns_the_strip(void);
 void test_readouts_are_not_selectable(void);
 void test_accelerators_come_from_the_table(void);
+void test_the_cursor_skips_readouts_and_wraps(void);
+void test_a_screen_of_readouts_has_no_cursor(void);
+void test_scrolling_keeps_the_cursor_visible(void);
+void test_the_primary_toggle_is_the_first_toggle(void);
+void test_accelerators_find_their_control(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -899,6 +904,11 @@ int main(int, char**) {
     RUN_TEST(test_strip_controls_are_disabled_while_warn_owns_the_strip);
     RUN_TEST(test_readouts_are_not_selectable);
     RUN_TEST(test_accelerators_come_from_the_table);
+    RUN_TEST(test_the_cursor_skips_readouts_and_wraps);
+    RUN_TEST(test_a_screen_of_readouts_has_no_cursor);
+    RUN_TEST(test_scrolling_keeps_the_cursor_visible);
+    RUN_TEST(test_the_primary_toggle_is_the_first_toggle);
+    RUN_TEST(test_accelerators_find_their_control);
     RUN_TEST(test_polling_is_fast_while_in_use_and_slow_when_idle);
     RUN_TEST(test_backlight_dims_then_goes_dark);
     RUN_TEST(test_sleep_never_interrupts_an_in_flight_request);

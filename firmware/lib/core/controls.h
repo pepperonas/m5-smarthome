@@ -21,7 +21,7 @@ struct Control {
     ControlKind kind = ControlKind::Readout;
     Bind bind = Bind::None;
     const char* label = "";
-    int value = 0;                    // Level: current; Choice: index; Toggle: 0/1
+    int value = 0;                    // Level: current; Choice: index; Toggle/Link: on/off
     char text[kControlTextLen] = {0}; // right-hand text (Choice/Readout/Link)
     int min = 0, max = 0, step = 1;
     Fmt fmt = Fmt::Plain;
@@ -48,5 +48,19 @@ void buildScreen(Screen s, const Dash& d, const UiState& st, ControlList& out);
 
 // Readouts are shown but never selected.
 bool selectable(const Control& c);
+
+// Cursor movement. Readouts are skipped; movement wraps. `from` may be -1.
+int firstSelectable(const ControlList& l);
+int nextSelectable(const ControlList& l, int from, int dir);
+
+// The scroll window: returns the first visible row so that `cursor` is on
+// screen, moving `scroll` as little as possible.
+int firstVisible(const ControlList& l, int cursor, int scroll);
+
+// Space flips this one: the first Toggle on the screen, or -1.
+int primaryToggle(const ControlList& l);
+
+// Index of the control whose accelerator is `ch`, or -1.
+int findAccel(const ControlList& l, char ch);
 
 }  // namespace core

@@ -198,4 +198,42 @@ void buildScreen(Screen s, const Dash& d, const UiState& st, ControlList& out) {
     }
 }
 
+int firstSelectable(const ControlList& l) {
+    for (int i = 0; i < l.count; ++i) if (selectable(l.items[i])) return i;
+    return -1;
+}
+
+int nextSelectable(const ControlList& l, int from, int dir) {
+    if (l.count == 0) return -1;
+    int i = from;
+    for (int n = 0; n < l.count; ++n) {
+        i = (i + dir + l.count) % l.count;
+        if (i < 0) i = 0;
+        if (selectable(l.items[i])) return i;
+    }
+    return from;                       // nothing else to land on
+}
+
+int firstVisible(const ControlList& l, int cursor, int scroll) {
+    const int rows = l.visibleRows > 0 ? l.visibleRows : 1;
+    if (scroll < 0) scroll = 0;
+    if (cursor < scroll) scroll = cursor;
+    if (cursor >= scroll + rows) scroll = cursor - rows + 1;
+    const int maxScroll = l.count > rows ? l.count - rows : 0;
+    if (scroll > maxScroll) scroll = maxScroll;
+    return scroll < 0 ? 0 : scroll;
+}
+
+int primaryToggle(const ControlList& l) {
+    for (int i = 0; i < l.count; ++i)
+        if (l.items[i].kind == ControlKind::Toggle) return i;
+    return -1;
+}
+
+int findAccel(const ControlList& l, char ch) {
+    if (!ch) return -1;
+    for (int i = 0; i < l.count; ++i) if (l.items[i].accel == ch) return i;
+    return -1;
+}
+
 }  // namespace core

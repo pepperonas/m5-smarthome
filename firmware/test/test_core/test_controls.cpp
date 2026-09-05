@@ -124,3 +124,67 @@ void test_accelerators_come_from_the_table(void) {
     TEST_ASSERT_EQUAL('i', find(l, Bind::YamInput)->accel);
     TEST_ASSERT_EQUAL(0, find(l, Bind::YamVol)->accel);
 }
+
+void test_the_cursor_skips_readouts_and_wraps(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l;
+    buildScreen(Screen::Fog, d, st, l);          // Toggle, Readout, Readout
+    TEST_ASSERT_EQUAL(0, firstSelectable(l));
+    TEST_ASSERT_EQUAL(0, nextSelectable(l, 0, +1));   // nothing else selectable: stays
+    TEST_ASSERT_EQUAL(0, nextSelectable(l, 0, -1));
+
+    buildScreen(Screen::Yamaha, d, st, l);       // four selectables
+    TEST_ASSERT_EQUAL(1, nextSelectable(l, 0, +1));
+    TEST_ASSERT_EQUAL(3, nextSelectable(l, 0, -1));   // wraps to the last
+    TEST_ASSERT_EQUAL(0, nextSelectable(l, 3, +1));
+}
+
+void test_a_screen_of_readouts_has_no_cursor(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l;
+    buildScreen(Screen::Climate, d, st, l);
+    TEST_ASSERT_EQUAL(-1, firstSelectable(l));
+}
+
+void test_scrolling_keeps_the_cursor_visible(void) {
+    ControlList l;
+    l.count = 12;
+    l.visibleRows = 7;
+    for (int i = 0; i < l.count; ++i) l.items[i].kind = ControlKind::Toggle;
+    TEST_ASSERT_EQUAL(0, firstVisible(l, 0, 0));
+    TEST_ASSERT_EQUAL(0, firstVisible(l, 6, 0));      // still on screen
+    TEST_ASSERT_EQUAL(1, firstVisible(l, 7, 0));      // one past the bottom
+    TEST_ASSERT_EQUAL(5, firstVisible(l, 11, 1));     // last row
+    TEST_ASSERT_EQUAL(2, firstVisible(l, 2, 5));      // cursor above the window
+}
+
+void test_the_primary_toggle_is_the_first_toggle(void) {
+    // Every real screen happens to lead with its power switch, so a synthetic
+    // list is what proves the search actually looks past row 0 rather than
+    // returning the first selectable row.
+    ControlList l;
+    l.count = 3;
+    l.items[0].kind = ControlKind::Choice;
+    l.items[1].kind = ControlKind::Level;
+    l.items[2].kind = ControlKind::Toggle;
+    TEST_ASSERT_EQUAL(2, primaryToggle(l));
+
+    Dash d = makeDash();
+    UiState st;
+    buildScreen(Screen::Teufel, d, st, l);       // the real one leads with power
+    TEST_ASSERT_EQUAL(0, primaryToggle(l));
+    TEST_ASSERT_TRUE(l.items[0].bind == Bind::TfOn);
+    buildScreen(Screen::Climate, d, st, l);
+    TEST_ASSERT_EQUAL(-1, primaryToggle(l));     // all readouts
+}
+
+void test_accelerators_find_their_control(void) {
+    Dash d = makeDash();
+    UiState st;
+    ControlList l;
+    buildScreen(Screen::Yamaha, d, st, l);
+    TEST_ASSERT_EQUAL(3, findAccel(l, 'm'));
+    TEST_ASSERT_EQUAL(-1, findAccel(l, 'z'));
+}
