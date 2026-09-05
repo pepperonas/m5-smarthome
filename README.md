@@ -14,14 +14,14 @@
 ![tool tests: 126](https://img.shields.io/badge/tool%20tests-126-brightgreen?style=flat-square)
 ![mutation probes: 41 caught](https://img.shields.io/badge/mutation%20probes-41%20caught-8A2BE2?style=flat-square)
 ![doc drift: checked in CI](https://img.shields.io/badge/doc%20drift-checked%20in%20CI-8A2BE2?style=flat-square)
-![lines of code: 10 065](https://img.shields.io/badge/lines%20of%20code-10%20065-blue?style=flat-square)
+![lines of code: 10 060](https://img.shields.io/badge/lines%20of%20code-10%20060-blue?style=flat-square)
 
 ![platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-E7352C?logo=espressif&logoColor=white&style=flat-square)
 ![board: M5Cardputer ADV](https://img.shields.io/badge/board-M5Cardputer%20ADV-orange?style=flat-square)
 ![framework: Arduino](https://img.shields.io/badge/framework-Arduino-00979D?logo=arduino&logoColor=white&style=flat-square)
 ![built with: PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-F5822A?logo=platformio&logoColor=white&style=flat-square)
 ![C++: 5 601 lines](https://img.shields.io/badge/C%2B%2B-5%20601%20lines-00599C?logo=cplusplus&logoColor=white&style=flat-square)
-![Python: 4 378 lines](https://img.shields.io/badge/Python-4%20378%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
+![Python: 4 373 lines](https://img.shields.io/badge/Python-4%20373%20lines-3776AB?logo=python&logoColor=white&style=flat-square)
 
 ![snapshot: < 1024 B](https://img.shields.io/badge/snapshot-%3C%201024%20B-success?style=flat-square)
 ![aggregates: 10 backends](https://img.shields.io/badge/aggregates-10%20backends-informational?style=flat-square)

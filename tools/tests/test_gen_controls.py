@@ -7,8 +7,6 @@ import pathlib
 import subprocess
 import sys
 
-import pytest
-
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 
@@ -77,7 +75,7 @@ def test_the_generated_doc_is_current():
     assert doc.read_text() == gen_controls.render_doc(TABLE)
 
 
-def test_check_mode_fails_on_drift(tmp_path, monkeypatch):
+def test_check_mode_fails_on_drift():
     header = ROOT / "firmware" / "lib" / "core" / "controls_table.h"
     original = header.read_text()
     try:

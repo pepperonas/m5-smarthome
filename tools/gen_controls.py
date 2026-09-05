@@ -19,9 +19,6 @@ JSON = ROOT / "firmware" / "controls.json"
 HEADER = ROOT / "firmware" / "lib" / "core" / "controls_table.h"
 DOC = ROOT / "docs" / "CONTROLS.md"
 
-# Screens that are not control lists and therefore have no table.
-NON_LIST_SCREENS = ("Console", "Diagnostics")
-
 KIND_WORD = {
     "Toggle": "an/aus", "Level": "Regler", "Choice": "Auswahl (sendet sofort)",
     "Picker": "Auswahl (Enter sendet)", "Stepper": "Schritt -/+", "Color": "Farbe",
