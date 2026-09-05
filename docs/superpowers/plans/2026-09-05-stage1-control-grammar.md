@@ -403,7 +403,7 @@ if __name__ == "__main__":
 - [ ] **Step 5: Generate and run the tests**
 
 Run: `python3 tools/gen_controls.py && python3 -m pytest tools/tests/test_gen_controls.py -q`
-Expected: `firmware/lib/core/controls_table.h: 27 controls on 9 screens` then `8 passed`.
+Expected: `firmware/lib/core/controls_table.h: 31 controls on 9 screens` then `8 passed`.
 
 Note: `controls_table.h` includes `ui_state.h` for `Screen`; `Screen::Room` does not exist yet, so the firmware will not compile until Task 5 adds it. That is expected — the header is only included from `controls.h` (Task 2), which is not compiled before Task 5 wires it in.
 
