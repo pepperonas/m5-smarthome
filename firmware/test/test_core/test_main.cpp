@@ -816,6 +816,15 @@ void test_an_unlisted_current_value_does_not_break_cycling(void);
 void test_diagnostics_sends_nothing(void);
 void test_the_diagnostics_key_does_not_collide(void);
 
+void test_every_list_screen_builds_within_the_slot_limit(void);
+void test_home_rows_carry_the_house_status(void);
+void test_the_room_list_is_one_link_per_room(void);
+void test_the_room_screen_reads_its_room(void);
+void test_levels_and_choices_show_the_current_value(void);
+void test_strip_controls_are_disabled_while_warn_owns_the_strip(void);
+void test_readouts_are_not_selectable(void);
+void test_accelerators_come_from_the_table(void);
+
 void setUp(void) {}
 void tearDown(void) {}
 
@@ -882,6 +891,14 @@ int main(int, char**) {
     RUN_TEST(test_a_hold_that_starts_after_the_window_does_nothing);
     RUN_TEST(test_a_hold_that_starts_inside_the_window_may_finish_outside_it);
     RUN_TEST(test_the_wake_key_can_never_wipe_the_device);
+    RUN_TEST(test_every_list_screen_builds_within_the_slot_limit);
+    RUN_TEST(test_home_rows_carry_the_house_status);
+    RUN_TEST(test_the_room_list_is_one_link_per_room);
+    RUN_TEST(test_the_room_screen_reads_its_room);
+    RUN_TEST(test_levels_and_choices_show_the_current_value);
+    RUN_TEST(test_strip_controls_are_disabled_while_warn_owns_the_strip);
+    RUN_TEST(test_readouts_are_not_selectable);
+    RUN_TEST(test_accelerators_come_from_the_table);
     RUN_TEST(test_polling_is_fast_while_in_use_and_slow_when_idle);
     RUN_TEST(test_backlight_dims_then_goes_dark);
     RUN_TEST(test_sleep_never_interrupts_an_in_flight_request);

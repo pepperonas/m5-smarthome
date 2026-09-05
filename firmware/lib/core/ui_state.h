@@ -13,7 +13,7 @@
 namespace core {
 
 enum class Screen : uint8_t {
-    Home, Rooms, Lichtwerk, Yamaha, Teufel, Disco, Fog, Climate, Console,
+    Home, Rooms, Room, Lichtwerk, Yamaha, Teufel, Disco, Fog, Climate, Console,
     Diagnostics,
 };
 
@@ -36,6 +36,8 @@ struct Key {
 struct UiState {
     Screen screen = Screen::Home;
     int cursor = 0;               // selected row on list screens
+    int scroll = 0;               // first visible row of the current list
+    int roomId = 0;               // which room Screen::Room shows
 
     // Console
     char input[40] = {0};
